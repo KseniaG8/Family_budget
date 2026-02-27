@@ -3,6 +3,8 @@
 #include "handlers/TransactionHandler.h"
 #include "services/UserService.h"
 #include "handlers/UserHandler.h"
+#include "server/Server.h"
+#include <boost/asio.hpp>
 #include <iostream>
 
 int main() {
@@ -12,18 +14,18 @@ int main() {
 
     UserService userService(db);
     UserHandler userHandler(userService);
-
-    auto reg = userHandler.registerUser("valeria", "1234");
-    std::cout << reg.dump(4) << std::endl;
-
-    auto login = userHandler.loginUser("valeria", "1234");
-    std::cout << login.dump(4) << std::endl;
     
     TransactionService service(db);
     TransactionHandler handler(service);
 
-    auto result = handler.getTransactions(1);
-    std::cout << result.dump(4) << std::endl;
-    
+    try {
+        boost::asio::io_context io_context;
+        Server server(io_context, 8080, userHandler, handler);
+        std::cout << "Server running on port 8080...\n";
+        io_context.run();
+    } catch (std::exception& e) {
+        std::cerr << "Exception: " << e.what() << "\n";
+    }
+
     return 0;
 }
