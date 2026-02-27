@@ -1,0 +1,41 @@
+#include <QTest>
+#include <QLineEdit>
+#include <QLabel>
+#include "../registrationdialog.h"
+
+class ClientUITest : public QObject {
+    Q_OBJECT
+
+private slots:
+    void testTabSwitching() {
+        RegistrationDialog dialog;
+        
+        // Access UI elements by object name (as defined in the .ui file)
+        QLabel* signInLabel = dialog.findChild<QLabel*>("signInLabel");
+        QLabel* signUpLabel = dialog.findChild<QLabel*>("signUpLabel");
+        QLineEdit* confirmEdit = dialog.findChild<QLineEdit*>("confirmEdit");
+        QLabel* confirmLabel = dialog.findChild<QLabel*>("confirmLabel");
+
+        QVERIFY(signInLabel != nullptr);
+        QVERIFY(confirmEdit != nullptr);
+
+        // SIGN IN is active by default, the confirm field should be hidden
+        QVERIFY(confirmEdit->isHidden());
+        QVERIFY(confirmLabel->isHidden());
+
+        // Simulate a click on SIGN UP
+        emit signUpLabel->linkActivated("#");
+
+        // Now the confirm password field should appear
+        QVERIFY(!confirmEdit->isHidden());
+        QVERIFY(!confirmLabel->isHidden());
+        
+        // Simulate a click back to SIGN IN
+        emit signInLabel->linkActivated("#");
+        QVERIFY(confirmEdit->isHidden());
+    }
+};
+
+// Macro to generate the main function of the test
+QTEST_MAIN(ClientUITest)
+#include "client_ui_tests.moc"
