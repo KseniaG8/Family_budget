@@ -1,0 +1,96 @@
+#include <gtest/gtest.h>
+#include "../database/Database.h"
+#include "../services/UserService.h"
+#include "../services/TransactionService.h"
+
+// --- Tests for UserService ---
+class UserServiceTest : public ::testing::Test {
+protected:
+    Database* db;
+    UserService* userService;
+
+    void SetUp() override {
+        // Use an in-memory database to isolate tests
+        db = new Database(":memory:");
+        db->init(); // Create users and transactions tables
+        userService = new UserService(*db);
+    }
+
+    void TearDown() override {
+        delete userService;
+        delete db;
+    }
+};
+
+TEST_F(UserServiceTest, RegisterValidationErrors) {
+    // Empty fields or spaces only
+    EXPECT_EQ(userService->registerUser("", "123456"), "empty_login");
+    EXPECT_EQ(userService->registerUser("   ", "123456"), "empty_login");
+    EXPECT_EQ(userService->registerUser("admin", ""), "empty_password");
+
+    // Short login and password
+    EXPECT_EQ(userService->registerUser("a", "123456"), "short_login");
+    EXPECT_EQ(userService->registerUser("admin", "12345"), "short_password");
+}
+
+TEST_F(UserServiceTest, RegisterSuccessAndDuplicate) {
+    // Successful registration
+    EXPECT_EQ(userService->registerUser("valeria", "123456"), "success");
+    
+    // Attempt to register the same login
+    EXPECT_EQ(userService->registerUser("valeria", "654321"), "user_exists");
+}
+
+TEST_F(UserServiceTest, LoginLogic) {
+    userService->registerUser("valeria", "123456");
+    
+    // Correct credentials
+    EXPECT_TRUE(userService->loginUser("valeria", "123456"));
+    
+    // Incorrect password or login
+    EXPECT_FALSE(userService->loginUser("valeria", "wrong_pass"));
+    EXPECT_FALSE(userService->loginUser("unknown_user", "123456"));
+}
+
+// --- Tests for TransactionService ---
+class TransactionServiceTest : public ::testing::Test {
+protected:
+    Database* db;
+    TransactionService* txService;
+    UserService* userService;
+
+    void SetUp() override {
+        db = new Database(":memory:");
+        db->init();
+        txService = new TransactionService(*db);
+        userService = new UserService(*db);
+        
+        // Create a test user with ID 1
+        userService->registerUser("test_user", "123456");
+    }
+
+    void TearDown() override {
+        delete userService;
+        delete txService;
+        delete db;
+    }
+};
+
+TEST_F(TransactionServiceTest, AddAndGetTransactions) {
+    // Check that the list is initially empty
+    auto initialTx = txService->getUserTransactions(1);
+    EXPECT_TRUE(initialTx.empty());
+
+    // Add incomes and expenses
+    txService->addTransaction(1, "income", 1500.50);
+    txService->addTransaction(1, "expense", 200.00);
+
+    auto txList = txService->getUserTransactions(1);
+    
+    // Check the count and values
+    ASSERT_EQ(txList.size(), 2);
+    EXPECT_EQ(txList[0].type, "income");
+    EXPECT_DOUBLE_EQ(txList[0].amount, 1500.50);
+    EXPECT_EQ(txList[1].type, "expense");
+    EXPECT_DOUBLE_EQ(txList[1].amount, 200.00);
+}
