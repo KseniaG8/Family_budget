@@ -14,7 +14,7 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network)
 
 set(PROJECT_SOURCES
-        src/main.cpp
+        src/client_main.cpp
         src/mainwindow.cpp
         inc/mainwindow.h
         ui/mainwindow.ui
