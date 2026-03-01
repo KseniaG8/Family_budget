@@ -14,13 +14,13 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network)
 
 set(PROJECT_SOURCES
-        main.cpp
-        mainwindow.cpp
-        mainwindow.h
-        mainwindow.ui
-        registrationdialog.cpp
-        registrationdialog.h
-        registrationdialog.ui
+        src/main.cpp
+        src/mainwindow.cpp
+        inc/mainwindow.h
+        ui/mainwindow.ui
+        src/registrationdialog.cpp
+        inc/registrationdialog.h
+        ui/registrationdialog.ui
 
 
 )
@@ -29,7 +29,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(BudgetClient
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        registrationdialog.ui
+        ui/registrationdialog.ui
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET BudgetClient APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
