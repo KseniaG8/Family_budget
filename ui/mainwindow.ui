@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>600</height>
+    <width>600</width>
+    <height>460</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,24 +18,223 @@
 border-radius: 20px;</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QLabel" name="label">
+   <widget class="QFrame" name="frame">
     <property name="geometry">
      <rect>
-      <x>50</x>
-      <y>10</y>
-      <width>691</width>
-      <height>121</height>
+      <x>0</x>
+      <y>-20</y>
+      <width>600</width>
+      <height>460</height>
      </rect>
     </property>
-    <property name="styleSheet">
-     <string notr="true">alignment: center;
+    <property name="frameShape">
+     <enum>QFrame::StyledPanel</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Raised</enum>
+    </property>
+    <widget class="QLabel" name="label">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>20</y>
+       <width>601</width>
+       <height>51</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">alignment: center;
 background-color: transparent;
 color: black;                   
 font: bold 25pt 'Segoe UI';</string>
-    </property>
-    <property name="text">
-     <string>Добро пожаловать в FamilyBudget!</string>
-    </property>
+     </property>
+     <property name="text">
+      <string>FamilyBudget</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_2">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>70</y>
+       <width>601</width>
+       <height>61</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">font: 18pt &quot;Sans Serif&quot;;</string>
+     </property>
+     <property name="text">
+      <string> Добро пожаловать, Name!</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_3">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>130</y>
+       <width>241</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">font: 12pt &quot;Sans Serif&quot;;</string>
+     </property>
+     <property name="text">
+      <string>Текущий баланс: XXXX</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="pushButton">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>170</y>
+       <width>161</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+	border-radius: 20px;
+    padding: 2px 5px;
+    font-size: 10pt;
+	icon: none
+}
+QPushButton {
+    background-color: transparent;
+    border: 2px solid #BAFF82;
+    color: black;
+}
+QPushButton:hover {
+    background-color: #48A000;
+	color: white;
+	border: none;
+}</string>
+     </property>
+     <property name="text">
+      <string>Добавить операцию</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_4">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>210</y>
+       <width>241</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">font: 12pt &quot;Sans Serif&quot;;</string>
+     </property>
+     <property name="text">
+      <string>Последние операции</string>
+     </property>
+    </widget>
+    <widget class="QTableWidget" name="tableWidget">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>250</y>
+       <width>371</width>
+       <height>141</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QTableWidget {
+    font: 10pt 'Segoe UI';
+}
+
+QTableWidget::item {
+    padding: 8px;
+}
+</string>
+     </property>
+     <row>
+      <property name="text">
+       <string>New Row</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>New Row</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>New Row</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string/>
+      </property>
+     </row>
+     <column>
+      <property name="text">
+       <string>Дата</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Категория</string>
+      </property>
+     </column>
+     <column>
+      <property name="text">
+       <string>Сумма</string>
+      </property>
+     </column>
+    </widget>
+    <widget class="QPushButton" name="pushButton_2">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>400</y>
+       <width>201</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+	border-radius: 20px;
+    padding: 2px 5px;
+    font-size: 10pt;
+	icon: none
+}
+QPushButton {
+    background-color: transparent;
+    border: 2px solid #BAFF82;
+    color: black;
+}
+QPushButton:hover {
+    background-color: #48A000;
+	color: white;
+	border: none;
+}</string>
+     </property>
+     <property name="text">
+      <string>Посмотреть все операции</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -43,7 +242,7 @@ font: bold 25pt 'Segoe UI';</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>600</width>
      <height>19</height>
     </rect>
    </property>

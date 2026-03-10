@@ -27,6 +27,7 @@ private slots:
     void onNetworkReply(QNetworkReply *reply);
 
 private:
+    int userId = -1;
     void sendRegistrationRequest(const QString &username, const QString &password);
     void sendLoginRequest(const QString &username, const QString &password);
     Ui::Dialog *ui;

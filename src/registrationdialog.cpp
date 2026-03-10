@@ -1,8 +1,10 @@
-#include "registrationdialog.h"
+#include "../inc/registrationdialog.h"
 #include "ui_registrationdialog.h"
 #include <QPushButton>
 #include <QMessageBox>
 #include <QDebug>
+
+const QString SERVER_URL = "http://localhost:8080";
 
 RegistrationDialog::RegistrationDialog(QWidget *parent)
     : QDialog(parent)
@@ -72,29 +74,28 @@ void RegistrationDialog::sendRegistrationRequest(const QString &username, const 
 {
     QJsonObject json;
     json["action"] = "register";
-    json["username"] = username;
+    json["login"] = username;
     json["password"] = password;
 
     QJsonDocument doc(json);
     QByteArray data = doc.toJson();
 
     qDebug() << "Запрос на регистрацию отправлен" << data;
-
-    QMessageBox::information(this, "Регистрация", "Данные готовы к отправке");
-    accept();
-
     /*
-    QNetworkRequest request(QUrl());
+    QUrl url(SERVER_URL);
+    QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     networkManager->post(request, data);
     */
+    accept();
+
 }
 
 void RegistrationDialog::sendLoginRequest(const QString &username, const QString &password)
 {
     QJsonObject json;
     json["action"] = "login";
-    json["username"] = username;
+    json["login"] = username;
     json["password"] = password;
 
     QJsonDocument doc(json);
@@ -102,14 +103,10 @@ void RegistrationDialog::sendLoginRequest(const QString &username, const QString
 
     qDebug() << "Запрос на вход отправлен" << data;
 
-    QMessageBox::information(this, "Регистрация", "Данные готовы к отправке");
-    accept();
-
-    /*
-    QNetworkRequest request(QUrl());
+    QUrl url(SERVER_URL);
+    QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     networkManager->post(request, data);
-    */
 }
 
 void RegistrationDialog::onRegisterButtonClicked()
@@ -138,13 +135,32 @@ void RegistrationDialog::onRegisterButtonClicked()
 
 void RegistrationDialog::onNetworkReply(QNetworkReply *reply) {
     if(reply->error() == QNetworkReply::NoError) {
-        QByteArray response = reply->readAll();
-        qDebug() << "Ответ сервера:" << response;
+        QByteArray responseData = reply->readAll();
+        qDebug() << "Ответ сервера:" << responseData;
 
-        QMessageBox::information(this, "Успех", "Операция выполнена успешно!");
-        accept();
+        QJsonDocument doc = QJsonDocument::fromJson(responseData);
+        QJsonObject response = doc.object();
+
+        if (response["status"].toString() == "success") {
+            if (response.contains("user_id")) {
+                userId = response["user_id"].toInt();
+                qDebug() << "User ID:" << userId;
+            }
+
+            QString message = response["message"].toString();
+            if (message.isEmpty()) {
+                message = "Успешно!";
+            }
+
+            QMessageBox::information(this, "Успех", message);
+            accept();
+        } else {
+            QString errorMsg = response["message"].toString("Неизвестная ошибка");
+            QMessageBox::warning(this, "Ошибка", errorMsg);
+        }
+
     } else {
-        QMessageBox::critical(this, "Ошибка", "Ошибка:" + reply->errorString());
+        QMessageBox::critical(this, "Ошибка сети", "Не удалось подключиться к серверу.\n" + reply->errorString());
     }
 
     reply->deleteLater();
