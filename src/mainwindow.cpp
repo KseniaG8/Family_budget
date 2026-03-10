@@ -1,6 +1,6 @@
-#include "mainwindow.h"
-#include "./ui_mainwindow.h"
-#include "registrationdialog.h"
+#include "../inc/mainwindow.h"
+#include "ui_mainwindow.h"
+#include "../inc/registrationdialog.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -8,8 +8,12 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+    ui->tableWidget->verticalHeader()->setVisible(false);
+    ui->tableWidget->update();
+
     RegistrationDialog *dialog = new RegistrationDialog(this);
     dialog->show();
+
 }
 
 MainWindow::~MainWindow()
