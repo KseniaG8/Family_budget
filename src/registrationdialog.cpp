@@ -81,13 +81,12 @@ void RegistrationDialog::sendRegistrationRequest(const QString &username, const 
     QByteArray data = doc.toJson();
 
     qDebug() << "Запрос на регистрацию отправлен" << data;
-    /*
+
     QUrl url(SERVER_URL);
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     networkManager->post(request, data);
-    */
-    accept();
+
 
 }
 
