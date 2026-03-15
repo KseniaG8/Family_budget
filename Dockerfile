@@ -5,7 +5,8 @@ RUN apt-get update && apt-get install -y \
     cmake \
     libsqlite3-dev \
     nlohmann-json3-dev \
-    libboost-all-dev
+    libboost-all-dev \
+    libbotan-2-dev
 
 WORKDIR /app
 
@@ -18,7 +19,9 @@ services/TransactionService.cpp \
 handlers/UserHandler.cpp \
 handlers/TransactionHandler.cpp \
 server/Server.cpp \
+-I/usr/include/botan-2 \
 -lsqlite3 \
+-lbotan-2 \
 -std=c++17 \
 -o budget_app
 
