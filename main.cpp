@@ -10,7 +10,6 @@
 int main() {
     Database db("budget.db");
     db.init();
-    db.clearTransactions();
 
     UserService userService(db);
     UserHandler userHandler(userService);
