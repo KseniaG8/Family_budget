@@ -20,5 +20,5 @@ public:
     User getUserByLogin(const std::string& login);
 
 private:
-    sqlite3* db;
+    sqlite3* db = nullptr;
 };

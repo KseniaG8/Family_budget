@@ -19,6 +19,7 @@ services/TransactionService.cpp \
 handlers/UserHandler.cpp \
 handlers/TransactionHandler.cpp \
 server/Server.cpp \
+server/Session.cpp \
 -I/usr/include/botan-2 \
 -lsqlite3 \
 -lbotan-2 \
