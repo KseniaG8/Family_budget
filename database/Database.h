@@ -19,6 +19,10 @@ public:
     bool addUser(const std::string& login, const std::string& password);
     User getUserByLogin(const std::string& login);
 
+    double getBalanceByUser(int user_id);
+
+    std::vector<Transaction> getTransactionsByCategory(int user_id, const std::string& category);
+
 private:
     sqlite3* db = nullptr;
 };
