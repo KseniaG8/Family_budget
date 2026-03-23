@@ -4,11 +4,15 @@
 
 class TransactionHandler {
 public:
-    TransactionHandler(TransactionService& service);
+  TransactionHandler(TransactionService &service);
 
-    nlohmann::json getTransactions(int user_id);
-    nlohmann::json addTransaction(int user_id, std::string type, double amount);
+  nlohmann::json getTransactions(int user_id);
+  nlohmann::json addTransaction(int user_id, std::string type, double amount,
+                                std::string category);
+  nlohmann::json getBalance(int user_id);
+  nlohmann::json getTransactionsByCategory(int user_id,
+                                           const std::string &category);
 
 private:
-    TransactionService& service;
+  TransactionService &service;
 };
