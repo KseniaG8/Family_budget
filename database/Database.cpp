@@ -7,7 +7,8 @@ void Database::init() {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             type TEXT,
-            amount REAL
+            amount REAL,
+            category TEXT
         );
     )";
 
@@ -55,7 +56,7 @@ Database::~Database() {
 
 
 void Database::addTransaction(const Transaction& t) {
-    std::string sql = "INSERT INTO transactions (user_id, type, amount) VALUES (?, ?, ?);";
+    std::string sql = "INSERT INTO transactions (user_id, type, amount, category) VALUES (?, ?, ?, ?);";
     sqlite3_stmt* stmt = nullptr;
 
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
@@ -67,6 +68,7 @@ void Database::addTransaction(const Transaction& t) {
     sqlite3_bind_int(stmt, 1, t.user_id);
     sqlite3_bind_text(stmt, 2, t.type.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_double(stmt, 3, t.amount);
+    sqlite3_bind_text(stmt, 4, t.category.c_str(), -1, SQLITE_TRANSIENT); // 👈 новое
 
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         std::cerr << "Insert transaction failed: " << sqlite3_errmsg(db) << "\n";
@@ -79,7 +81,7 @@ void Database::addTransaction(const Transaction& t) {
 std::vector<Transaction> Database::getTransactionsByUser(int user_id) {
     std::vector<Transaction> result;
 
-    std::string sql = "SELECT id, user_id, type, amount FROM transactions WHERE user_id = ?;";
+    std::string sql = "SELECT id, user_id, type, amount, category FROM transactions WHERE user_id = ?;";
     sqlite3_stmt* stmt = nullptr;
 
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
@@ -102,6 +104,10 @@ std::vector<Transaction> Database::getTransactionsByUser(int user_id) {
 
         t.amount = sqlite3_column_double(stmt, 3);
 
+        const unsigned char* categoryText = sqlite3_column_text(stmt, 4);
+        if (categoryText)
+            t.category = reinterpret_cast<const char*>(categoryText);
+
         result.push_back(t);
     }
 
@@ -121,7 +127,6 @@ void Database::clearTransactions() {
             sqlite3_free(errMsg);
     }
 }
-
 
 bool Database::addUser(const std::string& login, const std::string& password) {
     std::string sql = "INSERT INTO users (login, password) VALUES (?, ?);";
@@ -174,4 +179,69 @@ User Database::getUserByLogin(const std::string& login) {
 
     if (stmt) sqlite3_finalize(stmt);
     return user;
+}
+
+double Database::getBalanceByUser(int user_id) {
+    double balance = 0.0;
+
+    std::string sql = "SELECT type, amount FROM transactions WHERE user_id = ?;";
+    sqlite3_stmt* stmt = nullptr;
+
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Prepare failed: " << sqlite3_errmsg(db) << "\n";
+        if (stmt) sqlite3_finalize(stmt);
+        return balance;
+    }
+
+    sqlite3_bind_int(stmt, 1, user_id);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        const unsigned char* typeText = sqlite3_column_text(stmt, 0);
+        double amount = sqlite3_column_double(stmt, 1);
+
+        std::string type;
+        if (typeText)
+            type = reinterpret_cast<const char*>(typeText);
+
+        if (type == "income" || type == "Income")
+            balance += amount;
+        else if (type == "expense" || type == "Expense")
+            balance -= amount;
+    }
+
+    if (stmt) sqlite3_finalize(stmt);
+    return balance;
+}
+
+
+std::vector<Transaction> Database::getTransactionsByCategory(int user_id, const std::string& category) {
+    std::vector<Transaction> result;
+
+    std::string sql = "SELECT id, user_id, type, amount, category FROM transactions WHERE user_id = ? AND category = ?;";
+    sqlite3_stmt* stmt = nullptr;
+
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Prepare failed: " << sqlite3_errmsg(db) << "\n";
+        return result;
+    }
+
+    sqlite3_bind_int(stmt, 1, user_id);
+    sqlite3_bind_text(stmt, 2, category.c_str(), -1, SQLITE_TRANSIENT);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        Transaction t;
+
+        t.id = sqlite3_column_int(stmt, 0);
+        t.user_id = sqlite3_column_int(stmt, 1);
+        t.type = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2));
+        t.amount = sqlite3_column_double(stmt, 3);
+
+        const unsigned char* catText = sqlite3_column_text(stmt, 4);
+        t.category = catText ? reinterpret_cast<const char*>(catText) : "";
+
+        result.push_back(t);
+    }
+
+    if (stmt) sqlite3_finalize(stmt);
+    return result;
 }
