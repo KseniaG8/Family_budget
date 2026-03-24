@@ -1,4 +1,6 @@
 #include "TransactionService.h"
+#include "MLCategorizer.h"
+#include <spdlog/spdlog.h>
 
 TransactionService::TransactionService(Database &db) : database(db) {}
 
@@ -13,12 +15,30 @@ TransactionService::getTransactionsByCategory(int user_id,
 }
 
 void TransactionService::addTransaction(int user_id, std::string type,
-                                        double amount, std::string category) {
+                                        double amount, std::string category, 
+                                        std::string currency,
+                                        std::string description) {
+
+  if (category.empty() && !description.empty()) {
+      
+      auto history = database.getTransactionsByUser(user_id);
+      MLCategorizer ml;
+      ml.train(history);
+      category = ml.predictCategory(description); 
+
+      spdlog::info("ML Auto-categorized '{}' as '{}' for user {}", description, category, user_id);
+      
+  } else if (category.empty()) {
+      category = "Разное";
+  }
+
   Transaction t;
   t.user_id = user_id;
   t.type = type;
   t.amount = amount;
-  t.category = category;
+  t.category = category; 
+  t.currency = currency; 
+  t.description = description; 
 
   database.addTransaction(t);
 }
