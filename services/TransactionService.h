@@ -8,8 +8,10 @@ public:
   TransactionService(Database &db);
 
   std::vector<Transaction> getUserTransactions(int user_id);
+
   void addTransaction(int user_id, std::string type, double amount,
-                      std::string category);
+                      std::string category, std::string currency, 
+                      std::string description); 
 
   double getBalance(int user_id);
 
