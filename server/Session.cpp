@@ -1,4 +1,5 @@
 #include "Session.h"
+#include <spdlog/spdlog.h>
 #include <iostream>
 
 Session::Session(tcp::socket socket, UserHandler &userHandler,
@@ -31,27 +32,39 @@ void Session::process(const std::string &line) {
     auto j = json::parse(line);
 
     if (!j.contains("action")) {
+      spdlog::warn("Received request without action from client");
       response = {{"status", "error"}, {"message", "Missing action"}};
-    } else if (j["action"] == "register") {
-      response = userHandler_.registerUser(j["login"], j["password"]);
-    } else if (j["action"] == "login") {
-      response = userHandler_.loginUser(j["login"], j["password"]);
-    } else if (j["action"] == "add_transaction") {
-      std::string category = j.contains("category") ? j["category"] : "";
-      response = transactionHandler_.addTransaction(j["user_id"], j["type"],
-                                                    j["amount"], category);
-    } else if (j["action"] == "get_transactions") {
-      response = transactionHandler_.getTransactions(j["user_id"]);
-    } else if (j["action"] == "get_balance") {
-      response = transactionHandler_.getBalance(j["user_id"]);
-    } else if (j["action"] == "get_transactions_by_category") {
-      response = transactionHandler_.getTransactionsByCategory(j["user_id"],
-                                                               j["category"]);
     } else {
-      response = {{"status", "error"}, {"message", "Unknown action"}};
+      std::string action = j["action"];
+
+      spdlog::info("Processing action: {}", action); 
+
+      if (action == "register") {
+        response = userHandler_.registerUser(j["login"], j["password"]);
+      } else if (action == "login") {
+        response = userHandler_.loginUser(j["login"], j["password"]);
+      } else if (action == "add_transaction") {
+
+        std::string category = j.contains("category") ? j["category"] : "";
+        std::string currency = j.contains("currency") ? j["currency"] : "RUB";
+        std::string description = j.contains("description") ? j["description"] : "";
+
+        response = transactionHandler_.addTransaction(j["user_id"], j["type"], j["amount"], category, currency, description);
+        
+      } else if (action == "get_transactions") {
+        response = transactionHandler_.getTransactions(j["user_id"]);
+      } else if (action == "get_balance") {
+        response = transactionHandler_.getBalance(j["user_id"]);
+      } else if (action == "get_transactions_by_category") {
+        response = transactionHandler_.getTransactionsByCategory(j["user_id"], j["category"]);
+      } else {
+        spdlog::warn("Unknown action requested: {}", action);
+        response = {{"status", "error"}, {"message", "Unknown action"}};
+      }
     }
 
-  } catch (json::parse_error &) {
+  } catch (json::parse_error &e) {
+    spdlog::warn("Invalid JSON received: {}", e.what());
     response = {{"status", "error"}, {"message", "Invalid JSON"}};
   }
 
