@@ -7,11 +7,12 @@ public:
   TransactionHandler(TransactionService &service);
 
   nlohmann::json getTransactions(int user_id);
-  nlohmann::json addTransaction(int user_id, std::string type, double amount,
-                                std::string category);
   nlohmann::json getBalance(int user_id);
   nlohmann::json getTransactionsByCategory(int user_id,
                                            const std::string &category);
+  nlohmann::json addTransaction(int user_id, std::string type, double amount,
+                                std::string category, std::string currency, 
+                                std::string description);
 
 private:
   TransactionService &service;
