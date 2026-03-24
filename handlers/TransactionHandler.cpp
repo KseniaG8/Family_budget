@@ -36,10 +36,10 @@ TransactionHandler::getTransactionsByCategory(int user_id,
 }
 
 nlohmann::json TransactionHandler::addTransaction(int user_id, std::string type,
-                                                  double amount,
-                                                  std::string category) {
-  service.addTransaction(user_id, type, amount, category);
-
+                                                  double amount, std::string category, 
+                                                  std::string currency, 
+                                                  std::string description) {
+  service.addTransaction(user_id, type, amount, category, currency, description);
   return {{"status", "success"}};
 }
 
