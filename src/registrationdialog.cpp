@@ -87,7 +87,6 @@ void RegistrationDialog::sendRegistrationRequest(const QString &username, const 
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     networkManager->post(request, data);
 
-
 }
 
 void RegistrationDialog::sendLoginRequest(const QString &username, const QString &password)
