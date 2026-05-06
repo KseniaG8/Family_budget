@@ -2,12 +2,14 @@
 #include "ui_mainwindow.h"
 #include "../inc/alltransactionsdialog.h"
 #include "../inc/registrationdialog.h"
+#include "../inc/budgetlimitsdialog.h"
 
 #include <QMessageBox>
 #include <QDebug>
 #include <QFormLayout>
 #include <QComboBox>
 #include <QDoubleSpinBox>
+#include <QUrlQuery>
 #include <QDialogButtonBox>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -16,69 +18,73 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+    ui->tableWidget->setColumnCount(3);
+    ui->tableWidget->setHorizontalHeaderLabels(QStringList() << "Дата" << "Категория" << "Сумма");
     ui->tableWidget->verticalHeader()->setVisible(false);
     ui->tableWidget->update();
 
+    networkManager = new QNetworkAccessManager(this);
+    connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::onReplyFinished);
+
     RegistrationDialog *dialog = new RegistrationDialog(this);
-    dialog->show();
+    connect(dialog, &RegistrationDialog::loginSuccess, this, [this](int userId) {
+        currentUserId = userId;
+        refreshData();
+    });
+    dialog->exec();
 
     connect(ui->pushButton, &QPushButton::clicked, this, &MainWindow::onAddButtonClicked);
     connect(ui->pushButton_2, &QPushButton::clicked, this, &MainWindow::onAllTransactionsClicked);
-
-    connectToServer();
-
+    connect(ui->limitsButton, &QPushButton::clicked, this, &MainWindow::onLimitsClicked);
 }
 
-void MainWindow::connectToServer()
+void MainWindow::sendGetRequest(const QString &endpoint)
 {
-    socket = new QTcpSocket(this);
+    QUrl url(baseUrl + endpoint);
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    networkManager->get(request);
 
-    connect(socket, &QTcpSocket::connected, this, &MainWindow::onConnected);
-    connect(socket, &QTcpSocket::readyRead, this, &MainWindow::onReadyRead);
-    connect(socket, &QTcpSocket::errorOccurred, this, [this](QAbstractSocket::SocketError) {
-        QMessageBox::critical(this, "Ошибка", "Не удалось подключиться к серверу:\n" + socket->errorString());
-    });
-
-    socket->connectToHost(serverAddress, serverPort);
+    qDebug() << "GET:" << url.toString();
 }
 
-void MainWindow::onConnected()
+void MainWindow::sendPostRequest(const QString &endpoint, const QJsonObject &data)
 {
-    qDebug() << "Подключено к серверу";
-    refreshData();
+    QUrl url(baseUrl + endpoint);
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    QJsonDocument doc(data);
+    QByteArray postData = doc.toJson();
+
+    networkManager->post(request, postData);
+
+    qDebug() << "POST:" << url.toString() << postData;
 }
 
-void MainWindow::onReadyRead()
+void MainWindow::sendPutRequest(const QString &endpoint, const QJsonObject &data)
 {
-    QByteArray data = socket->readAll();
-    QString responseStr = QString::fromUtf8(data);
+    QUrl url(baseUrl + endpoint);
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-    QJsonDocument doc = QJsonDocument::fromJson(responseStr.toUtf8());
-    if (!doc.isNull()) {
-        handleResponse(doc.object());
-    }
+    QJsonDocument doc(data);
+    QByteArray putData = doc.toJson();
+
+    networkManager->put(request, putData);
+
+    qDebug() << "PUT:" << url.toString() << putData;
 }
 
-void MainWindow::sendRequest(const QJsonObject &request)
+void MainWindow::sendDeleteRequest(const QString &endpoint)
 {
-    QJsonDocument doc(request);
-    socket->write(doc.toJson(QJsonDocument::Compact) + "\n");
-}
+    QUrl url(baseUrl + endpoint);
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
-void MainWindow::handleResponse(const QJsonObject &response)
-{
-    if (response["status"] == "error") {
-        QMessageBox::warning(this, "Ошибка", response["message"].toString());
-        return;
-    }
+    networkManager->deleteResource(request);
 
-    if (response.contains("balance")) {
-        updateBalance(response["balance"].toDouble());
-    }
-
-    if (response.contains("transactions")) {
-        fillTable(response["transactions"].toArray());
-    }
+    qDebug() << "DELETE:" << url.toString();
 }
 
 void MainWindow::refreshData()
@@ -90,18 +96,12 @@ void MainWindow::refreshData()
 
 void MainWindow::loadBalance()
 {
-    QJsonObject request;
-    request["action"] = "get_balance";
-    request["user_id"] = currentUserId;
-    sendRequest(request);
+    sendGetRequest(QString("/balance?user_id=%1").arg(currentUserId));
 }
 
 void MainWindow::loadTransactions()
 {
-    QJsonObject request;
-    request["action"] = "get_transactions";
-    request["user_id"] = currentUserId;
-    sendRequest(request);
+    sendGetRequest(QString("/transactions?user_id=%1").arg(currentUserId));
 }
 
 void MainWindow::updateBalance(double balance)
@@ -115,10 +115,13 @@ void MainWindow::fillTable(const QJsonArray &transactions)
 
     for (int i = 0; i < transactions.size(); ++i) {
         QJsonObject obj = transactions[i].toObject();
+
         ui->tableWidget->setItem(i, 0, new QTableWidgetItem(obj["date"].toString()));
         ui->tableWidget->setItem(i, 1, new QTableWidgetItem(obj["category"].toString()));
         ui->tableWidget->setItem(i, 2, new QTableWidgetItem(QString::number(obj["amount"].toDouble())));
     }
+
+    ui->tableWidget->resizeColumnsToContents();
 }
 
 void MainWindow::onAddButtonClicked()
@@ -150,24 +153,103 @@ void MainWindow::onAddButtonClicked()
         QString type = typeBox->currentText() == "Доход" ? "income" : "expense";
 
         QJsonObject request;
-        request["action"] = "add_transaction";
         request["user_id"] = currentUserId;
         request["type"] = type;
         request["amount"] = amountSpin->value();
         request["category"] = categoryBox->currentText();
 
-        sendRequest(request);
+        sendPostRequest("/transactions", request);
 
         refreshData();
+
+        if (type == "expense") {
+            QString category = categoryBox->currentText();
+            checkBudgetLimit(category);
+        }
     }
 }
 
 void MainWindow::onAllTransactionsClicked()
 {
-    AllTransactionsDialog *dialog = new AllTransactionsDialog(this, currentUserId, socket);
+    AllTransactionsDialog *dialog = new AllTransactionsDialog(this, currentUserId, baseUrl);
     dialog->setAttribute(Qt::WA_DeleteOnClose);  // удалится при закрытии
     dialog->show();  // не блокирует главное окно (не modal)
-    // или dialog->exec(); - если хочешь модальный диалог
+}
+
+void MainWindow::onReplyFinished(QNetworkReply *reply)
+{
+    if (reply->error() != QNetworkReply::NoError) {
+        qDebug() << "HTTP Error:" << reply->errorString();
+        QMessageBox::warning(this, "Ошибка", "Ошибка запроса:\n" + reply->errorString());
+        reply->deleteLater();
+        return;
+    }
+
+    QByteArray responseData = reply->readAll();
+    QString url = reply->url().toString();
+    qDebug() << "Response from" << url << ":" << responseData;
+
+    QJsonDocument doc = QJsonDocument::fromJson(responseData);
+    if (doc.isNull()) {
+        qDebug() << "Failed to parse JSON";
+        reply->deleteLater();
+        return;
+    }
+
+    QJsonObject obj = doc.object();
+
+    // Проверяем статус ошибки
+    if (obj.contains("error")) {
+        QMessageBox::warning(this, "Ошибка", obj["error"].toString());
+        reply->deleteLater();
+        return;
+    }
+
+    // Обрабатываем в зависимости от URL
+    if (url.contains("/balance")) {
+        double balance = obj["balance"].toDouble();
+        updateBalance(balance);
+    }
+    else if (url.contains("/transactions") && !url.contains("/transaction")) {
+        QJsonArray transactions = obj["transactions"].toArray();
+        fillTable(transactions);
+    }
+    else if (url.contains("/limits/check")) {
+        if (obj.contains("error")) return;
+
+        double limit = obj["limit"].toDouble();
+        double spent = obj["spent"].toDouble();
+        double remaining = obj["remaining"].toDouble();
+        QString category = pendingBudgetCategory;
+
+        if (spent > limit) {
+            QMessageBox::warning(this, "Превышение лимита",
+                                 QString("Вы превысили лимит по категории '%1'!\n"
+                                         "Лимит: %2\nПотрачено: %3\nОсталось: %4")
+                                     .arg(category).arg(limit).arg(spent).arg(remaining));
+        } else if (spent > limit * 0.8) {
+            QMessageBox::information(this, "Внимание",
+                                     QString("По категории '%1' осталось менее 20%% лимита.\n"
+                                             "Осталось: %2")
+                                         .arg(category).arg(remaining));
+        }
+    }
+
+    reply->deleteLater();
+}
+
+void MainWindow::onLimitsClicked()
+{
+    BudgetLimitsDialog *dialog = new BudgetLimitsDialog(this, currentUserId, baseUrl);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->exec();
+}
+
+void MainWindow::checkBudgetLimit(const QString &category)
+{
+    pendingBudgetCategory = category;
+
+    sendGetRequest(QString("/limits/check?user_id=%1&category=%2").arg(currentUserId).arg(category));
 }
 
 MainWindow::~MainWindow()

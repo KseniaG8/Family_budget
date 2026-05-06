@@ -40,6 +40,12 @@
       <height>421</height>
      </rect>
     </property>
+    <property name="minimumSize">
+     <size>
+      <width>0</width>
+      <height>400</height>
+     </size>
+    </property>
    </widget>
    <widget class="QPushButton" name="refreshButton">
     <property name="geometry">

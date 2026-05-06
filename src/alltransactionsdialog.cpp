@@ -2,13 +2,14 @@
 #include "ui_alltransactionsdialog.h"
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <QJsonArray>
+#include <QMessageBox>
+#include <QDebug>
 
-AllTransactionsDialog::AllTransactionsDialog(QWidget *parent, int userId, QTcpSocket *existingSocket)
+AllTransactionsDialog::AllTransactionsDialog(QWidget *parent, int userId, const QString &baseUrl)
     : QDialog(parent)
     , ui(new Ui::AllTransactionsDialog)
     , currentUserId(userId)
-    , socket(existingSocket)
+    , baseUrl(baseUrl)
 {
     ui->setupUi(this);
 
@@ -18,6 +19,10 @@ AllTransactionsDialog::AllTransactionsDialog(QWidget *parent, int userId, QTcpSo
     // Настраиваем таблицу
     ui->tableWidget->setColumnCount(3);
     ui->tableWidget->setHorizontalHeaderLabels(QStringList() << "Дата" << "Категория" << "Сумма");
+    ui->tableWidget->verticalHeader()->setVisible(false);
+
+    networkManager = new QNetworkAccessManager(this);
+    connect(networkManager, &QNetworkAccessManager::finished, this, &AllTransactionsDialog::onReplyFinished);
 
     // Подключаем кнопки
     connect(ui->refreshButton, &QPushButton::clicked, this, &AllTransactionsDialog::onRefreshClicked);
@@ -34,7 +39,7 @@ AllTransactionsDialog::~AllTransactionsDialog()
 
 void AllTransactionsDialog::onBackClicked()
 {
-    this->close();  // или accept() / reject()
+    close();  // или accept() / reject()
 }
 
 void AllTransactionsDialog::onRefreshClicked()
@@ -44,16 +49,20 @@ void AllTransactionsDialog::onRefreshClicked()
 
 void AllTransactionsDialog::loadTransactions()
 {
-    QJsonObject request;
-    request["action"] = "get_transactions";
-    request["user_id"] = currentUserId;
+    QUrl url(QString("%1/transactions?user_id=%2").arg(baseUrl).arg(currentUserId));
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    networkManager->get(request);
 
-    QJsonDocument doc(request);
-    socket->write(doc.toJson(QJsonDocument::Compact) + "\n");
+    qDebug() << "GET:" << url.toString();
 }
 
 void AllTransactionsDialog::fillTable(const QJsonArray &transactions)
 {
+    ui->tableWidget->verticalHeader()->setDefaultSectionSize(30);
+
+    ui->tableWidget->setFixedHeight(10);
+
     ui->tableWidget->setRowCount(transactions.size());
 
     for (int i = 0; i < transactions.size(); ++i) {
@@ -62,4 +71,29 @@ void AllTransactionsDialog::fillTable(const QJsonArray &transactions)
         ui->tableWidget->setItem(i, 1, new QTableWidgetItem(obj["category"].toString()));
         ui->tableWidget->setItem(i, 2, new QTableWidgetItem(QString::number(obj["amount"].toDouble())));
     }
+
+    ui->tableWidget->resizeColumnsToContents();
+}
+
+void AllTransactionsDialog::onReplyFinished(QNetworkReply *reply)
+{
+    if (reply->error() != QNetworkReply::NoError) {
+        qDebug() << "Error:" << reply->errorString();
+        reply->deleteLater();
+        return;
+    }
+
+    QByteArray data = reply->readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+
+    if (!doc.isNull() && doc.isObject()) {
+        QJsonObject obj = doc.object();
+        if (obj.contains("transactions")) {
+            fillTable(obj["transactions"].toArray());
+        } else if (obj.contains("error")) {
+            QMessageBox::warning(this, "Ошибка", obj["error"].toString());
+        }
+    }
+
+    reply->deleteLater();
 }

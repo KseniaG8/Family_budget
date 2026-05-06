@@ -68,7 +68,7 @@ font: bold 25pt 'Segoe UI';</string>
       <string notr="true">font: 18pt &quot;Sans Serif&quot;;</string>
      </property>
      <property name="text">
-      <string> Добро пожаловать, Name!</string>
+      <string> Добро пожаловать, Ksenia!</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -248,7 +248,44 @@ QPushButton:hover {
       <string notr="true">font: 12pt &quot;Sans Serif&quot;;</string>
      </property>
      <property name="text">
-      <string>TextLabel</string>
+      <string>7893.00</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="limitsButton">
+     <property name="geometry">
+      <rect>
+       <x>430</x>
+       <y>400</y>
+       <width>81</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+	border-radius: 20px;
+    padding: 2px 5px;
+    font-size: 10pt;
+	icon: none
+}
+QPushButton {
+    background-color: transparent;
+    border: 2px solid #BAFF82;
+    color: black;
+}
+QPushButton:hover {
+    background-color: #48A000;
+	color: white;
+	border: none;
+}</string>
+     </property>
+     <property name="text">
+      <string>Лимиты</string>
      </property>
     </widget>
    </widget>

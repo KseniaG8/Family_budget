@@ -2,7 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QTcpSocket>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QTableWidgetItem>
@@ -23,24 +24,31 @@ public:
 
 private slots:
     void onAddButtonClicked();
-    void onConnected();
-    void onReadyRead();
+    void onReplyFinished(QNetworkReply *reply);
     void refreshData();
     void onAllTransactionsClicked();
+    void onLimitsClicked();
+    void checkBudgetLimit(const QString &category);
 
 private:
-    QTcpSocket *socket;
+    QNetworkAccessManager *networkManager;
     int currentUserId = -1;
-    QString serverAddress = "127.0.0.1";
-    quint16 serverPort = 8080;
+    QString baseUrl = "http://localhost:8080";
+    QString pendingBudgetCategory;
 
-    void connectToServer();
-    void sendRequest(const QJsonObject &request);
-    void handleResponse(const QJsonObject &response);
+    void sendGetRequest(const QString &endpoint);
+    void sendPostRequest(const QString &endpoint, const QJsonObject &data);
+    void sendPutRequest(const QString &endpoint, const QJsonObject &data);
+    void sendDeleteRequest(const QString &endpoint);
+
+    void handleRegisterResponse(const QJsonObject &response);
+    void handleLoginResponse(const QJsonObject &response);
+
     void loadBalance();
     void loadTransactions();
     void fillTable(const QJsonArray &transactions);
     void updateBalance(double balance);
+
     Ui::MainWindow *ui;
 };
 #endif // MAINWINDOW_H
