@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 RUN apt-get update && apt-get install -y \
     g++ \
@@ -23,7 +23,7 @@ server/Session.cpp \
 -I/usr/include/botan-2 \
 -lsqlite3 \
 -lbotan-2 \
--std=c++17 \
+-std=c++20 \
 -o budget_app
 
 CMD ["./budget_app"]
