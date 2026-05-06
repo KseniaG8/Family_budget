@@ -11,9 +11,6 @@ MainWindow::MainWindow(QWidget *parent)
     ui->tableWidget->verticalHeader()->setVisible(false);
     ui->tableWidget->update();
 
-    RegistrationDialog *dialog = new RegistrationDialog(this);
-    dialog->show();
-
 }
 
 MainWindow::~MainWindow()

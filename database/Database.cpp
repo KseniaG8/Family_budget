@@ -16,7 +16,10 @@ void Database::init() {
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             login TEXT UNIQUE,
-            password TEXT
+            password TEXT,
+            totp_secret TEXT DEFAULT '',
+            is_2fa_enabled INTEGER DEFAULT 0,
+            family_id INTEGER DEFAULT 0
         );
     )";
 
@@ -30,29 +33,48 @@ void Database::init() {
         );
     )";
 
+    const char *families_sql = R"(
+        CREATE TABLE IF NOT EXISTS families (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT
+        );
+    )";
+
+    const char *goals_sql = R"(
+        CREATE TABLE IF NOT EXISTS goals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            family_id INTEGER,
+            name TEXT,
+            target_amount REAL,
+            current_amount REAL DEFAULT 0.0
+        );
+    )";
+
     char *errMsg = nullptr;
 
     if (sqlite3_exec(db, transactions_sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
         std::cerr << "Failed to create transactions table: " << (errMsg ? errMsg : "unknown error") << std::endl;
-
-        if (errMsg) {
-            sqlite3_free(errMsg);
-            errMsg = nullptr;
-        }
+        if (errMsg) { sqlite3_free(errMsg); errMsg = nullptr; }
     }
 
     if (sqlite3_exec(db, users_sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
         std::cerr << "Failed to create users table: " << (errMsg ? errMsg : "unknown error") << std::endl;
-
-        if (errMsg) {
-            sqlite3_free(errMsg);
-            errMsg = nullptr;
-        }
+        if (errMsg) { sqlite3_free(errMsg); errMsg = nullptr; }
     }
 
     if (sqlite3_exec(db, limits_sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
-        std::cerr << "Failed to create limits table: " << errMsg << std::endl;
-        sqlite3_free(errMsg);
+        std::cerr << "Failed to create limits table: " << (errMsg ? errMsg : "unknown error") << std::endl;
+        if (errMsg) { sqlite3_free(errMsg); errMsg = nullptr; }
+    }
+
+    if (sqlite3_exec(db, families_sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        std::cerr << "Failed to create families table: " << (errMsg ? errMsg : "unknown error") << std::endl;
+        if (errMsg) { sqlite3_free(errMsg); errMsg = nullptr; }
+    }
+
+    if (sqlite3_exec(db, goals_sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        std::cerr << "Failed to create goals table: " << (errMsg ? errMsg : "unknown error") << std::endl;
+        if (errMsg) { sqlite3_free(errMsg); errMsg = nullptr; }
     }
 }
 
@@ -168,15 +190,14 @@ bool Database::addUser(const std::string &login, const std::string &password) {
 }
 
 User Database::getUserByLogin(const std::string &login) {
-    User user{-1, "", ""};
+    User user{-1, "", "", "", 0, 0}; 
 
-    std::string sql = "SELECT id, login, password FROM users WHERE login = ?;";
+    std::string sql = "SELECT id, login, password, totp_secret, is_2fa_enabled, family_id FROM users WHERE login = ?;";
     sqlite3_stmt *stmt = nullptr;
 
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
         std::cerr << "Prepare failed: " << sqlite3_errmsg(db) << "\n";
-        if (stmt)
-            sqlite3_finalize(stmt);
+        if (stmt) sqlite3_finalize(stmt);
         return user;
     }
 
@@ -184,18 +205,20 @@ User Database::getUserByLogin(const std::string &login) {
 
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         user.id = sqlite3_column_int(stmt, 0);
+        
         const unsigned char *loginText = sqlite3_column_text(stmt, 1);
         const unsigned char *passText = sqlite3_column_text(stmt, 2);
+        const unsigned char *secretText = sqlite3_column_text(stmt, 3); 
 
-        if (loginText)
-            user.login = reinterpret_cast<const char *>(loginText);
-
-        if (passText)
-            user.password = reinterpret_cast<const char *>(passText);
+        if (loginText) user.login = reinterpret_cast<const char *>(loginText);
+        if (passText) user.password = reinterpret_cast<const char *>(passText);
+        if (secretText) user.totp_secret = reinterpret_cast<const char *>(secretText);
+        
+        user.is_2fa_enabled = sqlite3_column_int(stmt, 4); 
+        user.family_id = sqlite3_column_int(stmt, 5);      
     }
 
-    if (stmt)
-        sqlite3_finalize(stmt);
+    if (stmt) sqlite3_finalize(stmt);
     return user;
 }
 
@@ -412,4 +435,110 @@ double Database::getSpentByCategory(int user_id, const std::string &category) {
 
     sqlite3_finalize(stmt);
     return spent;
+}
+
+int Database::createFamily(const std::string &family_name) {
+    std::string sql = "INSERT INTO families (name) VALUES (?);";
+    sqlite3_stmt *stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) return 0;
+    
+    sqlite3_bind_text(stmt, 1, family_name.c_str(), -1, SQLITE_TRANSIENT);
+    
+    int family_id = 0;
+    if (sqlite3_step(stmt) == SQLITE_DONE) {
+        family_id = sqlite3_last_insert_rowid(db); 
+    }
+    sqlite3_finalize(stmt);
+    return family_id;
+}
+
+bool Database::joinFamily(int user_id, int family_id) {
+    std::string sql = "UPDATE users SET family_id = ? WHERE id = ?;";
+    sqlite3_stmt *stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) return false;
+
+    sqlite3_bind_int(stmt, 1, family_id);
+    sqlite3_bind_int(stmt, 2, user_id);
+
+    bool success = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return success;
+}
+
+int Database::getUserFamilyId(int user_id) {
+    std::string sql = "SELECT family_id FROM users WHERE id = ?;";
+    sqlite3_stmt *stmt = nullptr;
+    int family_id = 0;
+
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_int(stmt, 1, user_id);
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            family_id = sqlite3_column_int(stmt, 0);
+        }
+    }
+    sqlite3_finalize(stmt);
+    return family_id;
+}
+
+
+bool Database::addGoal(int family_id, const std::string &name, double target_amount) {
+    std::string sql = "INSERT INTO goals (family_id, name, target_amount) VALUES (?, ?, ?);";
+    sqlite3_stmt *stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) return false;
+
+    sqlite3_bind_int(stmt, 1, family_id);
+    sqlite3_bind_text(stmt, 2, name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_double(stmt, 3, target_amount);
+
+    bool success = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return success;
+}
+
+std::vector<Goal> Database::getGoalsByFamily(int family_id) {
+    std::vector<Goal> result;
+    std::string sql = "SELECT id, family_id, name, target_amount, current_amount FROM goals WHERE family_id = ?;";
+    sqlite3_stmt *stmt = nullptr;
+
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+        sqlite3_bind_int(stmt, 1, family_id);
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            Goal g;
+            g.id = sqlite3_column_int(stmt, 0);
+            g.family_id = sqlite3_column_int(stmt, 1);
+            g.name = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
+            g.target_amount = sqlite3_column_double(stmt, 3);
+            g.current_amount = sqlite3_column_double(stmt, 4);
+            result.push_back(g);
+        }
+    }
+    sqlite3_finalize(stmt);
+    return result;
+}
+
+bool Database::addMoneyToGoal(int goal_id, double amount) {
+    std::string sql = "UPDATE goals SET current_amount = current_amount + ? WHERE id = ?;";
+    sqlite3_stmt *stmt = nullptr;
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) return false;
+
+    sqlite3_bind_double(stmt, 1, amount);
+    sqlite3_bind_int(stmt, 2, goal_id);
+
+    bool success = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return success;
+}
+
+bool Database::enable2FA(int user_id, const std::string &secret) {
+    std::string sql = "UPDATE users SET totp_secret = ?, is_2fa_enabled = 1 WHERE id = ?;";
+    sqlite3_stmt *stmt = nullptr;
+
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) return false;
+
+    sqlite3_bind_text(stmt, 1, secret.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 2, user_id);
+
+    bool success = sqlite3_step(stmt) == SQLITE_DONE;
+    sqlite3_finalize(stmt);
+    return success;
 }
