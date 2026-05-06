@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 RUN apt-get update && apt-get install -y \
     g++ \
@@ -38,7 +38,7 @@ server/Session.cpp \
 -lspdlog \
 -lfmt \
 -pthread \
--std=c++17 \
+-std=c++20 \
 -o budget_app
 
 CMD ["./budget_app"]

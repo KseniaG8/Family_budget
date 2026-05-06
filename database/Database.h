@@ -7,7 +7,6 @@
 
 class Database {
 public:
-    bool enable2FA(int user_id, const std::string &secret);
     Database(const std::string &db_name);
     ~Database();
 
@@ -15,22 +14,17 @@ public:
 
     void addTransaction(const Transaction &t);
     std::vector<Transaction> getTransactionsByUser(int user_id);
-
+    std::vector<Transaction> getTransactionsByCategory(int user_id, const std::string &category);
+    bool updateTransaction(int transaction_id, const std::string &type, double amount, const std::string &category);
+    bool deleteTransaction(int transaction_id);
+    Transaction getTransactionById(int transaction_id);
     void clearTransactions();
 
     bool addUser(const std::string &login, const std::string &password);
     User getUserByLogin(const std::string &login);
-
-    bool updateTransaction(int transaction_id, const std::string &type, double amount, const std::string &category);
+    bool enable2FA(int user_id, const std::string &secret);
 
     double getBalanceByUser(int user_id);
-
-    std::vector<Transaction> getTransactionsByCategory(int user_id, const std::string &category);
-
-    bool deleteTransaction(int transaction_id);
-
-    Transaction getTransactionById(int transaction_id);
-
     bool setLimit(int user_id, const std::string &category, double limit_amount);
     double getLimit(int user_id, const std::string &category);
     double getSpentByCategory(int user_id, const std::string &category);
