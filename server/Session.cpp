@@ -1,80 +1,194 @@
 #include "Session.h"
-#include <spdlog/spdlog.h>
 #include <iostream>
 
-Session::Session(tcp::socket socket, UserHandler &userHandler,
-                 TransactionHandler &transactionHandler)
-    : socket_(std::move(socket)), userHandler_(userHandler),
-      transactionHandler_(transactionHandler) {}
+namespace beast = boost::beast;
+namespace http = beast::http;
+using tcp = boost::asio::ip::tcp;
+using json = nlohmann::json;
 
-void Session::start() { read(); }
+Session::Session(tcp::socket socket, UserHandler &userHandler, TransactionHandler &transactionHandler)
+    : socket_(std::move(socket)), userHandler_(userHandler), transactionHandler_(transactionHandler) {}
 
-void Session::read() {
-  auto self = shared_from_this();
+void Session::start() { read_request(); }
 
-  boost::asio::async_read_until(
-      socket_, buffer_, "\n",
-      [this, self](boost::system::error_code ec, std::size_t) {
+void Session::read_request() {
+    auto self = shared_from_this();
+
+    http::async_read(socket_, buffer_, request_, [self](beast::error_code ec, std::size_t) {
         if (!ec) {
-          std::istream is(&buffer_);
-          std::string line;
-          std::getline(is, line);
-
-          process(line);
+            self->handle_request();
         }
-      });
+    });
 }
 
-void Session::process(const std::string &line) {
-  json response;
+void Session::handle_request() {
+    try {
+        std::string target = std::string(request_.target());
 
-  try {
-    auto j = json::parse(line);
+        if (request_.method() == http::verb::post && target == "/register") {
+            json body = json::parse(request_.body());
 
-    if (!j.contains("action")) {
-      spdlog::warn("Received request without action from client");
-      response = {{"status", "error"}, {"message", "Missing action"}};
-    } else {
-      std::string action = j["action"];
+            auto result = userHandler_.registerUser(body["login"], body["password"]);
 
-      spdlog::info("Processing action: {}", action); 
+            send_response(result);
+            return;
+        }
 
-      if (action == "register") {
-        response = userHandler_.registerUser(j["login"], j["password"]);
-      } else if (action == "login") {
-        response = userHandler_.loginUser(j["login"], j["password"]);
-      } else if (action == "add_transaction") {
+        if (request_.method() == http::verb::post && target == "/login") {
+            json body = json::parse(request_.body());
 
-        std::string category = j.contains("category") ? j["category"] : "";
-        std::string currency = j.contains("currency") ? j["currency"] : "RUB";
-        std::string description = j.contains("description") ? j["description"] : "";
+            auto result = userHandler_.loginUser(body["login"], body["password"]);
 
-        response = transactionHandler_.addTransaction(j["user_id"], j["type"], j["amount"], category, currency, description);
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::post && target == "/2fa/setup") {
+            json body = json::parse(request_.body());
+            
+            auto result = userHandler_.setup2FA(body["user_id"], body["login"]);
+            
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::post && target == "/2fa/verify") {
+            json body = json::parse(request_.body());
+            
+            auto result = userHandler_.verifyLogin2FA(body["login"], body["code"]);
+            
+            send_response(result);
+            return;
+        }
         
-      } else if (action == "get_transactions") {
-        response = transactionHandler_.getTransactions(j["user_id"]);
-      } else if (action == "get_balance") {
-        response = transactionHandler_.getBalance(j["user_id"]);
-      } else if (action == "get_transactions_by_category") {
-        response = transactionHandler_.getTransactionsByCategory(j["user_id"], j["category"]);
-      } else {
-        spdlog::warn("Unknown action requested: {}", action);
-        response = {{"status", "error"}, {"message", "Unknown action"}};
-      }
+        if (request_.method() == http::verb::post && target == "/transactions") {
+            json body = json::parse(request_.body());
+
+            std::string category = body.contains("category") ? body["category"].get<std::string>() : "";
+
+            auto result = transactionHandler_.addTransaction(body["user_id"], body["type"], body["amount"], category);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::get && target.find("/transactions?") == 0) {
+            int user_id = std::stoi(get_query_param(target, "user_id"));
+
+            auto result = transactionHandler_.getTransactions(user_id);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::get && target.find("/balance?") == 0) {
+            int user_id = std::stoi(get_query_param(target, "user_id"));
+
+            auto result = transactionHandler_.getBalance(user_id);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::get && target.find("/transactions/category?") == 0) {
+            int user_id = std::stoi(get_query_param(target, "user_id"));
+            std::string category = get_query_param(target, "category");
+
+            auto result = transactionHandler_.getTransactionsByCategory(user_id, category);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::put && target == "/transactions") {
+            json body = json::parse(request_.body());
+
+            auto result = transactionHandler_.updateTransaction(
+                body["transaction_id"], body["type"], body["amount"], body["category"]);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::delete_ && target.find("/transactions?") == 0) {
+            int transaction_id = std::stoi(get_query_param(target, "id"));
+
+            auto result = transactionHandler_.deleteTransaction(transaction_id);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::get && target.find("/transaction?") == 0) {
+            int transaction_id = std::stoi(get_query_param(target, "id"));
+
+            auto result = transactionHandler_.getTransactionById(transaction_id);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::post && target == "/limits") {
+            json body = json::parse(request_.body());
+
+            auto result = transactionHandler_.setLimit(body["user_id"], body["category"], body["limit"]);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::get && target.find("/limits/check?") == 0) {
+            int user_id = std::stoi(get_query_param(target, "user_id"));
+            std::string category = get_query_param(target, "category");
+
+            auto result = transactionHandler_.checkLimit(user_id, category);
+
+            send_response(result);
+            return;
+        }
+
+        send_response({{"status", "error"}, {"message", "Unknown endpoint"}}, http::status::not_found);
+
+    } catch (const std::exception &e) {
+        send_response({{"status", "error"}, {"message", e.what()}}, http::status::bad_request);
+    }
+}
+
+void Session::send_response(const json &body, http::status status) {
+    auto self = shared_from_this();
+
+    response_.version(request_.version());
+    response_.result(status);
+    response_.set(http::field::server, "FamilyBudgetServer");
+    response_.set(http::field::content_type, "application/json");
+    response_.body() = body.dump();
+    response_.prepare_payload();
+
+    http::async_write(socket_, response_, [self](beast::error_code ec, std::size_t) {
+        self->socket_.shutdown(tcp::socket::shutdown_send, ec);
+    });
+}
+
+std::string Session::get_query_param(const std::string &target, const std::string &key) {
+    auto question_pos = target.find('?');
+    if (question_pos == std::string::npos) {
+        return "";
     }
 
-  } catch (json::parse_error &e) {
-    spdlog::warn("Invalid JSON received: {}", e.what());
-    response = {{"status", "error"}, {"message", "Invalid JSON"}};
-  }
+    std::string query = target.substr(question_pos + 1);
+    std::string search = key + "=";
 
-  write(response.dump() + "\n");
-}
+    auto key_pos = query.find(search);
+    if (key_pos == std::string::npos) {
+        return "";
+    }
 
-void Session::write(const std::string &response) {
-  auto self = shared_from_this();
+    auto value_start = key_pos + search.length();
+    auto value_end = query.find('&', value_start);
 
-  boost::asio::async_write(socket_, boost::asio::buffer(response),
-                           [this, self](boost::system::error_code ec,
-                                        std::size_t) { socket_.close(); });
+    if (value_end == std::string::npos) {
+        return query.substr(value_start);
+    }
+
+    return query.substr(value_start, value_end - value_start);
 }
