@@ -99,13 +99,13 @@ void RegistrationDialog::onRegisterButtonClicked()
         }
 
         QJsonObject request;
-        request["login"] = login;
+        request["login"] = username;
         request["password"] = password;
 
         sendPostRequest("/register", request);
     } else {
         QJsonObject request;
-        request["login"] = login;
+        request["login"] = username;
         request["password"] = password;
 
         sendPostRequest("/login", request);

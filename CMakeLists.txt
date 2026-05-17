@@ -36,10 +36,6 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(BudgetClient
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        ui/registrationdialog.ui
-        inc/budgetlimitsdialog.h
-        ui/budgetlimitsdialog.ui
-        src/budgetlimitsdialog.cpp
 
     )
 # Define target properties for Android with Qt 6 as:

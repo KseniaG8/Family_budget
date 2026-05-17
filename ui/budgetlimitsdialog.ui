@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>Dialog</class>
- <widget class="QDialog" name="Dialog">
+ <class>BudgetLimitsDialog</class>
+ <widget class="QDialog" name="BudgetLimitsDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -115,7 +115,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton">
+   <widget class="QPushButton" name="saveButton">
     <property name="geometry">
      <rect>
       <x>20</x>
@@ -128,7 +128,7 @@
      <string>Сохранить</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_2">
+   <widget class="QPushButton" name="checkButton">
     <property name="geometry">
      <rect>
       <x>140</x>
