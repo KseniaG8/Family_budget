@@ -8,7 +8,7 @@
 #include <QJsonDocument>
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class Dialog; }
+namespace Ui { class RegistrationDialog; }
 QT_END_NAMESPACE
 
 class RegistrationDialog : public QDialog
@@ -18,21 +18,22 @@ class RegistrationDialog : public QDialog
 public:
     explicit RegistrationDialog(QWidget *parent = nullptr);
     ~RegistrationDialog();
-;
+
+signals:
+    void loginSuccess(int userId);
 
 private slots:
     void onSignInClicked();
     void onSignUpClicked();
-    void onRegisterButtonClicked();
-    void onNetworkReply(QNetworkReply *reply);
+    void onReplyFinished(QNetworkReply *reply);
 
 private:
-    int userId = -1;
-    void sendRegistrationRequest(const QString &username, const QString &password);
-    void sendLoginRequest(const QString &username, const QString &password);
-    Ui::Dialog *ui;
-    void setActiveTab(const QString &tab);
+    Ui::RegistrationDialog *ui;
     QNetworkAccessManager *networkManager;
+    QString baseUrl = "http://localhost:8080";
+
+    void sendPostRequest(const QString &endpoint, const QJsonObject &data);
+
 
 };
 

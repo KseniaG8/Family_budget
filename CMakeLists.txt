@@ -22,6 +22,12 @@ set(PROJECT_SOURCES
         src/registrationdialog.cpp
         inc/registrationdialog.h
         ui/registrationdialog.ui
+        ui/alltransactionsdialog.ui
+        inc/alltransactionsdialog.h
+        src/alltransactionsdialog.cpp
+        inc/budgetlimitsdialog.h
+        src/budgetlimitsdialog.cpp
+        ui/budgetlimitsdialog.ui
 
 
 )
@@ -31,6 +37,10 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
         ui/registrationdialog.ui
+        inc/budgetlimitsdialog.h
+        ui/budgetlimitsdialog.ui
+        src/budgetlimitsdialog.cpp
+
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET BudgetClient APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
