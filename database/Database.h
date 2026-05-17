@@ -1,4 +1,6 @@
 #pragma once
+#include "../models/Goal.h"
+#include "../models/Group.h"
 #include "../models/Transaction.h"
 #include "../models/User.h"
 #include <sqlite3.h>
@@ -29,9 +31,28 @@ public:
 
     Transaction getTransactionById(int transaction_id);
 
-    bool setLimit(int user_id, const std::string &category, double limit_amount);
-    double getLimit(int user_id, const std::string &category);
-    double getSpentByCategory(int user_id, const std::string &category);
+    bool setLimit(int user_id, const std::string &category, double limit_amount, const std::string &period);
+    double getLimit(int user_id, const std::string &category, const std::string &period);
+    double getSpentByCategory(int user_id, const std::string &category, const std::string &period);
+
+    bool addGoal(int user_id, const std::string &name, double target_amount);
+
+    std::vector<Goal> getGoalsByUser(int user_id);
+
+    bool updateGoalProgress(int goal_id, double current_amount);
+
+    int createGroup(const std::string &name, int owner_id);
+
+    bool addUserToGroup(int group_id, int user_id);
+
+    std::vector<Group> getUserGroups(int user_id);
+
+    bool
+    addGroupTransaction(int group_id, int user_id, const std::string &type, double amount, const std::string &category);
+
+    std::vector<Transaction> getGroupTransactions(int group_id);
+
+    double getGroupBalance(int group_id);
 
 private:
     sqlite3 *db = nullptr;
