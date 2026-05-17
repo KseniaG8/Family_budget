@@ -4,6 +4,7 @@
 struct Transaction {
   int id;
   int user_id;
+  int group_id = -1;
   std::string type;
   double amount;
   std::string category;
