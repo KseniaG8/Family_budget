@@ -29,6 +29,7 @@ private slots:
     void onAllTransactionsClicked();
     void onLimitsClicked();
     void checkBudgetLimit(const QString &category);
+    void onGoalsButtonClicked();
 
 private:
     QNetworkAccessManager *networkManager;
