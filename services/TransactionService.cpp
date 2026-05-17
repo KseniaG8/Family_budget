@@ -35,23 +35,54 @@ Transaction TransactionService::getTransactionById(int transaction_id) {
     return database.getTransactionById(transaction_id);
 }
 
-bool TransactionService::setLimit(int user_id, const std::string &category, double limit_amount) {
-    return database.setLimit(user_id, category, limit_amount);
+bool TransactionService::setLimit(int user_id,
+                                  const std::string &category,
+                                  double limit_amount,
+                                  const std::string &period) {
+    return database.setLimit(user_id, category, limit_amount, period);
 }
 
-nlohmann::json TransactionService::checkLimit(int user_id, const std::string &category) {
-    double limit = database.getLimit(user_id, category);
+double TransactionService::getLimit(int user_id, const std::string &category, const std::string &period) {
+    return database.getLimit(user_id, category, period);
+}
 
-    if (limit < 0) {
-        return {{"status", "error"}, {"message", "Limit not found"}};
+double TransactionService::getSpentByCategory(int user_id, const std::string &category, const std::string &period) {
+    return database.getSpentByCategory(user_id, category, period);
+}
+
+bool TransactionService::addGoal(int user_id, const std::string &name, double target_amount) {
+    return database.addGoal(user_id, name, target_amount);
+}
+
+std::vector<Goal> TransactionService::getGoals(int user_id) { return database.getGoalsByUser(user_id); }
+
+bool TransactionService::updateGoalProgress(int goal_id, double current_amount) {
+    return database.updateGoalProgress(goal_id, current_amount);
+}
+
+int TransactionService::createGroup(const std::string &name, int owner_id) {
+    int group_id = database.createGroup(name, owner_id);
+
+    if (group_id != -1) {
+        database.addUserToGroup(group_id, owner_id);
     }
 
-    double spent = database.getSpentByCategory(user_id, category);
-
-    return {{"status", "success"},
-            {"category", category},
-            {"limit", limit},
-            {"spent", spent},
-            {"remaining", limit - spent},
-            {"exceeded", spent > limit}};
+    return group_id;
 }
+
+bool TransactionService::addUserToGroup(int group_id, int user_id) {
+    return database.addUserToGroup(group_id, user_id);
+}
+
+std::vector<Group> TransactionService::getUserGroups(int user_id) { return database.getUserGroups(user_id); }
+
+bool TransactionService::addGroupTransaction(
+    int group_id, int user_id, const std::string &type, double amount, const std::string &category) {
+    return database.addGroupTransaction(group_id, user_id, type, amount, category);
+}
+
+std::vector<Transaction> TransactionService::getGroupTransactions(int group_id) {
+    return database.getGroupTransactions(group_id);
+}
+
+double TransactionService::getGroupBalance(int group_id) { return database.getGroupBalance(group_id); }
