@@ -7,6 +7,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include "setup2FAdialog.h"
+
 const QString SERVER_URL = "http://localhost:8080";
 
 RegistrationDialog::RegistrationDialog(QWidget *parent)
@@ -162,6 +163,7 @@ void RegistrationDialog::onReplyFinished(QNetworkReply *reply)
             accept();
         }
     }
+    
     reply->deleteLater();
 }
 

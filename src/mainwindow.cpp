@@ -182,7 +182,7 @@ void MainWindow::onAddButtonClicked()
 void MainWindow::onAllTransactionsClicked()
 {
     AllTransactionsDialog *dialog = new AllTransactionsDialog(this, currentUserId, baseUrl);
-    dialog->setAttribute(Qt::WA_DeleteOnClose);  
+    dialog->setAttribute(Qt::WA_DeleteOnClose); 
     dialog->show();  
 }
 
@@ -255,6 +255,7 @@ void MainWindow::onReplyFinished(QNetworkReply *reply)
             QMessageBox::information(this, "Успех", "Двухфакторная аутентификация успешно включена!");
         }
     }   
+
     reply->deleteLater();
 }
 

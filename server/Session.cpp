@@ -89,6 +89,7 @@ void Session::handle_request() {
         }
 
         if (request_.method() == http::verb::put && target == "/transactions") {
+
             json body = json::parse(request_.body());
             auto result = transactionHandler_.updateTransaction(
                 body["transaction_id"], body["type"], body["amount"], body["category"]);
@@ -97,6 +98,7 @@ void Session::handle_request() {
         }
 
         if (request_.method() == http::verb::delete_ && target.find("/transactions?") == 0) {
+
             int transaction_id = std::stoi(get_query_param(target, "id"));
             auto result = transactionHandler_.deleteTransaction(transaction_id);
             send_response(result);
@@ -104,6 +106,7 @@ void Session::handle_request() {
         }
 
         if (request_.method() == http::verb::get && target.find("/transaction?") == 0) {
+
             int transaction_id = std::stoi(get_query_param(target, "id"));
             auto result = transactionHandler_.getTransactionById(transaction_id);
             send_response(result);
@@ -112,15 +115,111 @@ void Session::handle_request() {
 
         if (request_.method() == http::verb::post && target == "/limits") {
             json body = json::parse(request_.body());
-            auto result = transactionHandler_.setLimit(body["user_id"], body["category"], body["limit"]);
+
+            auto result =
+                transactionHandler_.setLimit(body["user_id"], body["category"], body["limit"], body["period"]);
+
             send_response(result);
             return;
         }
 
         if (request_.method() == http::verb::get && target.find("/limits/check?") == 0) {
+
             int user_id = std::stoi(get_query_param(target, "user_id"));
             std::string category = get_query_param(target, "category");
-            auto result = transactionHandler_.checkLimit(user_id, category);
+            std::string period = get_query_param(target, "period");
+
+            auto result = transactionHandler_.checkLimit(user_id, category, period);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::post && target == "/goals") {
+            json body = json::parse(request_.body());
+
+            auto result = transactionHandler_.addGoal(body["user_id"], body["name"], body["target_amount"]);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::get && target.find("/goals?") == 0) {
+
+            int user_id = std::stoi(get_query_param(target, "user_id"));
+
+            auto result = transactionHandler_.getGoals(user_id);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::put && target == "/goals/progress") {
+
+            json body = json::parse(request_.body());
+
+            auto result = transactionHandler_.updateGoalProgress(body["goal_id"], body["current_amount"]);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::post && target == "/groups") {
+            json body = json::parse(request_.body());
+
+            auto result = transactionHandler_.createGroup(body["name"], body["owner_id"]);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::post && target == "/groups/members") {
+            json body = json::parse(request_.body());
+
+            auto result = transactionHandler_.addUserToGroup(body["group_id"], body["user_id"]);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::get && target.find("/groups?") == 0) {
+
+            int user_id = std::stoi(get_query_param(target, "user_id"));
+
+            auto result = transactionHandler_.getUserGroups(user_id);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::post && target == "/groups/transactions") {
+            json body = json::parse(request_.body());
+
+            std::string category = body.contains("category") ? body["category"].get<std::string>() : "";
+
+            auto result = transactionHandler_.addGroupTransaction(
+                body["group_id"], body["user_id"], body["type"], body["amount"], category);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::get && target.find("/groups/transactions?") == 0) {
+
+            int group_id = std::stoi(get_query_param(target, "group_id"));
+
+            auto result = transactionHandler_.getGroupTransactions(group_id);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::get && target.find("/groups/balance?") == 0) {
+
+            int group_id = std::stoi(get_query_param(target, "group_id"));
+
+            auto result = transactionHandler_.getGroupBalance(group_id);
+
             send_response(result);
             return;
         }

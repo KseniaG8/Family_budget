@@ -3,7 +3,7 @@
 
 struct Goal {
     int id;
-    int family_id; 
+    int user_id;
     std::string name;
     double target_amount;
     double current_amount;
