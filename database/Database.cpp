@@ -69,16 +69,6 @@ void Database::init() {
         );
     )";
 
-    const char *goals_sql = R"(
-        CREATE TABLE IF NOT EXISTS goals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            family_id INTEGER,
-            name TEXT,
-            target_amount REAL,
-            current_amount REAL DEFAULT 0.0
-        );
-    )";
-
     char *errMsg = nullptr;
 
     if (sqlite3_exec(db, transactions_sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {

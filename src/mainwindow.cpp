@@ -11,12 +11,22 @@
 #include <QDoubleSpinBox>
 #include <QUrlQuery>
 #include <QDialogButtonBox>
+#include "setup2FAdialog.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    QPushButton *setup2faBtn = new QPushButton("Включить 2FA", this);
+    setup2faBtn->setGeometry(10, 10, 120, 30); 
+    connect(setup2faBtn, &QPushButton::clicked, this, [this]() {
+        QJsonObject request;
+        request["user_id"] = currentUserId; 
+        request["login"] = "User_" + QString::number(currentUserId); 
+        sendPostRequest("/2fa/setup", request);
+    });
 
     ui->tableWidget->setColumnCount(3);
     ui->tableWidget->setHorizontalHeaderLabels(QStringList() << "Дата" << "Категория" << "Сумма");
@@ -172,8 +182,8 @@ void MainWindow::onAddButtonClicked()
 void MainWindow::onAllTransactionsClicked()
 {
     AllTransactionsDialog *dialog = new AllTransactionsDialog(this, currentUserId, baseUrl);
-    dialog->setAttribute(Qt::WA_DeleteOnClose);  // удалится при закрытии
-    dialog->show();  // не блокирует главное окно (не modal)
+    dialog->setAttribute(Qt::WA_DeleteOnClose); 
+    dialog->show();  
 }
 
 void MainWindow::onReplyFinished(QNetworkReply *reply)
@@ -198,14 +208,12 @@ void MainWindow::onReplyFinished(QNetworkReply *reply)
 
     QJsonObject obj = doc.object();
 
-    // Проверяем статус ошибки
     if (obj.contains("error")) {
         QMessageBox::warning(this, "Ошибка", obj["error"].toString());
         reply->deleteLater();
         return;
     }
 
-    // Обрабатываем в зависимости от URL
     if (url.contains("/balance")) {
         double balance = obj["balance"].toDouble();
         updateBalance(balance);
@@ -234,6 +242,19 @@ void MainWindow::onReplyFinished(QNetworkReply *reply)
                                          .arg(category).arg(remaining));
         }
     }
+    else if (url.contains("/2fa/setup")) {
+        if (obj.contains("error")) {
+            QMessageBox::warning(this, "Ошибка", obj["error"].toString());
+        } else {
+            QString secret = obj["secret"].toString();
+            QString uri = obj["uri"].toString();
+
+            Setup2FADialog setupDialog(uri, secret, this);
+            setupDialog.exec();
+        
+            QMessageBox::information(this, "Успех", "Двухфакторная аутентификация успешно включена!");
+        }
+    }   
 
     reply->deleteLater();
 }
