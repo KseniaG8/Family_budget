@@ -1,14 +1,17 @@
 #include "../inc/registrationdialog.h"
 #include "ui_registrationdialog.h"
+#include "Verify2FADialog.h" 
 #include <QPushButton>
 #include <QMessageBox>
 #include <QDebug>
-
+#include <QJsonDocument>
+#include <QJsonObject>
+#include "setup2FAdialog.h"
 const QString SERVER_URL = "http://localhost:8080";
 
 RegistrationDialog::RegistrationDialog(QWidget *parent)
     : QDialog(parent)
-    , ui(new Ui::Dialog)
+    , ui(new Ui::RegistrationDialog)
 {
     ui->setupUi(this);
 
@@ -16,14 +19,13 @@ RegistrationDialog::RegistrationDialog(QWidget *parent)
 
     networkManager = new QNetworkAccessManager(this);
 
-    connect(networkManager, &QNetworkAccessManager::finished, this, &RegistrationDialog::onNetworkReply);
+    connect(networkManager, &QNetworkAccessManager::finished, this, &RegistrationDialog::onReplyFinished);
 
     connect(ui->signInLabel, &QLabel::linkActivated, this, &RegistrationDialog::onSignInClicked);
     connect(ui->signUpLabel, &QLabel::linkActivated, this, &RegistrationDialog::onSignUpClicked);
     connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &RegistrationDialog::onRegisterButtonClicked);
     connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &RegistrationDialog::reject);
 
-    // По умолчанию SIGN IN
     setActiveTab("signin");
 
     ui->signInLabel->setText("<a href=\"#\" style=\"color: black; text-decoration: none; background-color: transparent;\">SIGN IN</a>");
@@ -42,70 +44,32 @@ void RegistrationDialog::onSignUpClicked()
     setActiveTab("signup");
 }
 
+void RegistrationDialog::sendPostRequest(const QString &endpoint, const QJsonObject &data)
+{
+    QUrl url(SERVER_URL + endpoint); 
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    QJsonDocument doc(data);
+    networkManager->post(request, doc.toJson());
+}
+
 void RegistrationDialog::setActiveTab(const QString &tab)
 {
     if (tab == "signin") {
-        // SIGN IN активен
         ui->signInLabel->setStyleSheet("color: #2c3e50; font: bold 12pt; background-color: transparent;");
         ui->signUpLabel->setStyleSheet("color: #95a5a6; font: bold 12pt; background-color: transparent;");
-
-        // Передвигаем линию под SIGN IN
         ui->underline->move(110, ui->underline->y());
-
-        // Скрываем поле подтверждения пароля
         ui->confirmLabel->hide();
         ui->confirmEdit->hide();
     }
     else if (tab == "signup") {
-        // SIGN UP активен
         ui->signInLabel->setStyleSheet("color: #95a5a6; font: bold 12pt; background-color: transparent;");
         ui->signUpLabel->setStyleSheet("color: #2c3e50; font: bold 12pt; background-color: transparent;");
-
-        // Передвигаем линию под SIGN UP
         ui->underline->move(340, ui->underline->y());
-
-        // Показываем поле подтверждения пароля
         ui->confirmLabel->show();
         ui->confirmEdit->show();
     }
-}
-
-void RegistrationDialog::sendRegistrationRequest(const QString &username, const QString &password)
-{
-    QJsonObject json;
-    json["action"] = "register";
-    json["login"] = username;
-    json["password"] = password;
-
-    QJsonDocument doc(json);
-    QByteArray data = doc.toJson();
-
-    qDebug() << "Запрос на регистрацию отправлен" << data;
-
-    QUrl url(SERVER_URL);
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    networkManager->post(request, data);
-
-
-}
-
-void RegistrationDialog::sendLoginRequest(const QString &username, const QString &password)
-{
-    QJsonObject json;
-    json["action"] = "login";
-    json["login"] = username;
-    json["password"] = password;
-
-    QJsonDocument doc(json);
-    QByteArray data = doc.toJson();
-
-    qDebug() << "Запрос на вход отправлен" << data;
-
-    QUrl url(SERVER_URL);
-    QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    networkManager->post(request, data);
 }
 
 void RegistrationDialog::onRegisterButtonClicked()
@@ -126,42 +90,78 @@ void RegistrationDialog::onRegisterButtonClicked()
             return;
         }
 
-        sendRegistrationRequest(username, password);
+        QJsonObject request;
+        request["login"] = username; 
+        request["password"] = password;
+
+        sendPostRequest("/register", request);
     } else {
-        sendLoginRequest(username, password);
+        QJsonObject request;
+        request["login"] = username; 
+        request["password"] = password;
+
+        sendPostRequest("/login", request);
     }
 }
 
-void RegistrationDialog::onNetworkReply(QNetworkReply *reply) {
-    if(reply->error() == QNetworkReply::NoError) {
-        QByteArray responseData = reply->readAll();
-        qDebug() << "Ответ сервера:" << responseData;
-
-        QJsonDocument doc = QJsonDocument::fromJson(responseData);
-        QJsonObject response = doc.object();
-
-        if (response["status"].toString() == "success") {
-            if (response.contains("user_id")) {
-                userId = response["user_id"].toInt();
-                qDebug() << "User ID:" << userId;
-            }
-
-            QString message = response["message"].toString();
-            if (message.isEmpty()) {
-                message = "Успешно!";
-            }
-
-            QMessageBox::information(this, "Успех", message);
-            accept();
-        } else {
-            QString errorMsg = response["message"].toString("Неизвестная ошибка");
-            QMessageBox::warning(this, "Ошибка", errorMsg);
-        }
-
-    } else {
-        QMessageBox::critical(this, "Ошибка сети", "Не удалось подключиться к серверу.\n" + reply->errorString());
+void RegistrationDialog::onReplyFinished(QNetworkReply *reply)
+{
+    if (reply->error() != QNetworkReply::NoError) {
+        QMessageBox::warning(this, "Ошибка", "Ошибка сети: " + reply->errorString());
+        reply->deleteLater();
+        return;
     }
 
+    QByteArray responseData = reply->readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(responseData);
+    QJsonObject obj = doc.object();
+
+    QString url = reply->url().toString();
+
+    if (url.contains("/register")) {
+        if (obj.contains("error") || obj["status"].toString() == "error") {
+            QString errMsg = obj.contains("message") ? obj["message"].toString() : obj["error"].toString();
+            QMessageBox::warning(this, "Ошибка регистрации", errMsg);
+        } else {
+            QMessageBox::information(this, "Успех", "Регистрация успешна! Теперь войдите.");
+            setActiveTab("signin"); 
+        }
+    }
+    else if (url.contains("/login") && !url.contains("/verify")) {
+        if (obj.contains("error") || obj["status"].toString() == "error") {
+            QString errMsg = obj.contains("message") ? obj["message"].toString() : obj["error"].toString();
+            QMessageBox::warning(this, "Ошибка входа", errMsg);
+        } else {
+            bool is2faEnabled = obj["is_2fa_enabled"].toBool();
+            
+            if (is2faEnabled) {
+                Verify2FADialog dialog(this);
+                if (dialog.exec() == QDialog::Accepted) {
+                    QString code = dialog.getCode();
+                    
+                    QJsonObject request;
+                    request["login"] = ui->lineEdit_2->text();
+                    request["code"] = code;
+                    
+                    sendPostRequest("/2fa/verify", request);
+                }
+            } else {
+                int userId = obj["user_id"].toInt();
+                emit loginSuccess(userId);
+                accept();  
+            }
+        }
+    }
+    else if (url.contains("/2fa/verify")) {
+        if (obj.contains("error") || obj["status"].toString() == "error") {
+            QString errMsg = obj.contains("message") ? obj["message"].toString() : "Неверный код!";
+            QMessageBox::warning(this, "Ошибка 2FA", errMsg);
+        } else {
+            int userId = obj["user_id"].toInt();
+            emit loginSuccess(userId);
+            accept();
+        }
+    }
     reply->deleteLater();
 }
 
@@ -169,5 +169,3 @@ RegistrationDialog::~RegistrationDialog()
 {
     delete ui;
 }
-
-
