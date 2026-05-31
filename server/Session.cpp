@@ -27,40 +27,28 @@ void Session::handle_request() {
 
         if (request_.method() == http::verb::post && target == "/register") {
             json body = json::parse(request_.body());
+
             auto result = userHandler_.registerUser(body["login"], body["password"]);
+
             send_response(result);
             return;
         }
 
         if (request_.method() == http::verb::post && target == "/login") {
             json body = json::parse(request_.body());
+
             auto result = userHandler_.loginUser(body["login"], body["password"]);
+
             send_response(result);
             return;
         }
 
-        if (request_.method() == http::verb::post && target == "/2fa/setup") {
-            json body = json::parse(request_.body());
-            auto result = userHandler_.setup2FA(body["user_id"], body["login"]);
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::post && target == "/2fa/verify") {
-            json body = json::parse(request_.body());
-            auto result = userHandler_.verifyLogin2FA(body["login"], body["code"]);
-            send_response(result);
-            return;
-        }
-        
         if (request_.method() == http::verb::post && target == "/transactions") {
             json body = json::parse(request_.body());
 
             std::string category = body.contains("category") ? body["category"].get<std::string>() : "";
-            std::string currency = body.contains("currency") ? body["currency"].get<std::string>() : "";
-            std::string description = body.contains("description") ? body["description"].get<std::string>() : "";
 
-            auto result = transactionHandler_.addTransaction(body["user_id"], body["type"], body["amount"], category, currency, description);
+            auto result = transactionHandler_.addTransaction(body["user_id"], body["type"], body["amount"], category);
 
             send_response(result);
             return;
@@ -68,14 +56,18 @@ void Session::handle_request() {
 
         if (request_.method() == http::verb::get && target.find("/transactions?") == 0) {
             int user_id = std::stoi(get_query_param(target, "user_id"));
+
             auto result = transactionHandler_.getTransactions(user_id);
+
             send_response(result);
             return;
         }
 
         if (request_.method() == http::verb::get && target.find("/balance?") == 0) {
             int user_id = std::stoi(get_query_param(target, "user_id"));
+
             auto result = transactionHandler_.getBalance(user_id);
+
             send_response(result);
             return;
         }
@@ -83,7 +75,9 @@ void Session::handle_request() {
         if (request_.method() == http::verb::get && target.find("/transactions/category?") == 0) {
             int user_id = std::stoi(get_query_param(target, "user_id"));
             std::string category = get_query_param(target, "category");
+
             auto result = transactionHandler_.getTransactionsByCategory(user_id, category);
+
             send_response(result);
             return;
         }
@@ -91,8 +85,10 @@ void Session::handle_request() {
         if (request_.method() == http::verb::put && target == "/transactions") {
 
             json body = json::parse(request_.body());
+
             auto result = transactionHandler_.updateTransaction(
                 body["transaction_id"], body["type"], body["amount"], body["category"]);
+
             send_response(result);
             return;
         }
@@ -100,7 +96,9 @@ void Session::handle_request() {
         if (request_.method() == http::verb::delete_ && target.find("/transactions?") == 0) {
 
             int transaction_id = std::stoi(get_query_param(target, "id"));
+
             auto result = transactionHandler_.deleteTransaction(transaction_id);
+
             send_response(result);
             return;
         }
@@ -108,7 +106,9 @@ void Session::handle_request() {
         if (request_.method() == http::verb::get && target.find("/transaction?") == 0) {
 
             int transaction_id = std::stoi(get_query_param(target, "id"));
+
             auto result = transactionHandler_.getTransactionById(transaction_id);
+
             send_response(result);
             return;
         }
@@ -138,7 +138,7 @@ void Session::handle_request() {
         if (request_.method() == http::verb::post && target == "/goals") {
             json body = json::parse(request_.body());
 
-            auto result = transactionHandler_.addGoal(body["user_id"], body["name"], body["target_amount"]);
+            auto result = transactionHandler_.addGoal(body["user_id"], body["name"], body["target_amount"], body["deadline"]);
 
             send_response(result);
             return;
@@ -164,6 +164,31 @@ void Session::handle_request() {
             return;
         }
 
+        if (request_.method() == http::verb::put && target == "/goals") {
+            json body = json::parse(request_.body());
+
+            auto result = transactionHandler_.updateGoal(
+                body["goal_id"],
+                body["name"],
+                body["target_amount"],
+                body["deadline"]
+            );
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::delete_ &&
+            target.find("/goals?") == 0) {
+
+            int goal_id = std::stoi(get_query_param(target, "id"));
+
+            auto result = transactionHandler_.deleteGoal(goal_id);
+
+            send_response(result);
+            return;
+        }
+
         if (request_.method() == http::verb::post && target == "/groups") {
             json body = json::parse(request_.body());
 
@@ -173,10 +198,56 @@ void Session::handle_request() {
             return;
         }
 
+        if (request_.method() == http::verb::delete_ &&
+            target.find("/groups?") == 0) {
+
+            int group_id = std::stoi(get_query_param(target, "id"));
+
+            auto result = transactionHandler_.deleteGroup(group_id);
+
+            send_response(result);
+            return;
+        }
+
         if (request_.method() == http::verb::post && target == "/groups/members") {
             json body = json::parse(request_.body());
 
             auto result = transactionHandler_.addUserToGroup(body["group_id"], body["user_id"]);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::delete_ &&
+            target.find("/groups/members?") == 0) {
+
+            int group_id =
+                std::stoi(
+                    get_query_param(
+                        target,
+                        "group_id"));
+
+            int user_id =
+                std::stoi(
+                    get_query_param(
+                        target,
+                        "user_id"));
+
+            auto result =
+                transactionHandler_.removeUserFromGroup(
+                    group_id,
+                    user_id);
+
+            send_response(result);
+            return;
+        }
+
+        if (request_.method() == http::verb::get &&
+            target.find("/groups/members?") == 0) {
+
+            int group_id = std::stoi(get_query_param(target, "group_id"));
+
+            auto result = transactionHandler_.getGroupMembers(group_id);
 
             send_response(result);
             return;

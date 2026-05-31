@@ -18,10 +18,7 @@ void Database::init() {
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             login TEXT UNIQUE,
-            password TEXT,
-            totp_secret TEXT DEFAULT '',
-            is_2fa_enabled INTEGER DEFAULT 0,
-            family_id INTEGER DEFAULT 0
+            password TEXT
         );
     )";
 
@@ -41,6 +38,7 @@ void Database::init() {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             name TEXT,
+            deadline TEXT,
             target_amount REAL,
             current_amount REAL DEFAULT 0
         );
@@ -62,23 +60,24 @@ void Database::init() {
         );
     )";
 
-    const char *families_sql = R"(
-        CREATE TABLE IF NOT EXISTS families (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT
-        );
-    )";
-
     char *errMsg = nullptr;
 
     if (sqlite3_exec(db, transactions_sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
         std::cerr << "Failed to create transactions table: " << (errMsg ? errMsg : "unknown error") << std::endl;
-        if (errMsg) { sqlite3_free(errMsg); errMsg = nullptr; }
+
+        if (errMsg) {
+            sqlite3_free(errMsg);
+            errMsg = nullptr;
+        }
     }
 
     if (sqlite3_exec(db, users_sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
         std::cerr << "Failed to create users table: " << (errMsg ? errMsg : "unknown error") << std::endl;
-        if (errMsg) { sqlite3_free(errMsg); errMsg = nullptr; }
+
+        if (errMsg) {
+            sqlite3_free(errMsg);
+            errMsg = nullptr;
+        }
     }
 
     if (sqlite3_exec(db, limits_sql, nullptr, nullptr, &errMsg) != SQLITE_OK) {
@@ -133,8 +132,7 @@ void Database::addTransaction(const Transaction &t) {
 
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
         std::cerr << "Prepare failed: " << sqlite3_errmsg(db) << "\n";
-        if (stmt)
-            sqlite3_finalize(stmt);
+        sqlite3_finalize(stmt);
         return;
     }
 
@@ -147,8 +145,7 @@ void Database::addTransaction(const Transaction &t) {
         std::cerr << "Insert transaction failed: " << sqlite3_errmsg(db) << "\n";
     }
 
-    if (stmt)
-        sqlite3_finalize(stmt);
+    sqlite3_finalize(stmt);
 }
 
 std::vector<Transaction> Database::getTransactionsByUser(int user_id) {
@@ -160,8 +157,6 @@ std::vector<Transaction> Database::getTransactionsByUser(int user_id) {
 
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
         std::cerr << "Prepare failed: " << sqlite3_errmsg(db) << "\n";
-        if (stmt)
-            sqlite3_finalize(stmt);
         return result;
     }
 
@@ -186,8 +181,7 @@ std::vector<Transaction> Database::getTransactionsByUser(int user_id) {
         result.push_back(t);
     }
 
-    if (stmt)
-        sqlite3_finalize(stmt);
+    sqlite3_finalize(stmt);
     return result;
 }
 
@@ -209,8 +203,6 @@ bool Database::addUser(const std::string &login, const std::string &password) {
 
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
         std::cerr << "Prepare failed: " << sqlite3_errmsg(db) << "\n";
-        if (stmt)
-            sqlite3_finalize(stmt);
         return false;
     }
 
@@ -224,20 +216,18 @@ bool Database::addUser(const std::string &login, const std::string &password) {
         return false;
     }
 
-    if (stmt)
-        sqlite3_finalize(stmt);
+    sqlite3_finalize(stmt);
     return true;
 }
 
 User Database::getUserByLogin(const std::string &login) {
-    User user{-1, "", "", "", 0, 0}; 
+    User user{-1, "", ""};
 
-    std::string sql = "SELECT id, login, password, totp_secret, is_2fa_enabled, family_id FROM users WHERE login = ?;";
+    std::string sql = "SELECT id, login, password FROM users WHERE login = ?;";
     sqlite3_stmt *stmt = nullptr;
 
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
         std::cerr << "Prepare failed: " << sqlite3_errmsg(db) << "\n";
-        if (stmt) sqlite3_finalize(stmt);
         return user;
     }
 
@@ -245,20 +235,17 @@ User Database::getUserByLogin(const std::string &login) {
 
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         user.id = sqlite3_column_int(stmt, 0);
-        
         const unsigned char *loginText = sqlite3_column_text(stmt, 1);
         const unsigned char *passText = sqlite3_column_text(stmt, 2);
-        const unsigned char *secretText = sqlite3_column_text(stmt, 3); 
 
-        if (loginText) user.login = reinterpret_cast<const char *>(loginText);
-        if (passText) user.password = reinterpret_cast<const char *>(passText);
-        if (secretText) user.totp_secret = reinterpret_cast<const char *>(secretText);
-        
-        user.is_2fa_enabled = sqlite3_column_int(stmt, 4); 
-        user.family_id = sqlite3_column_int(stmt, 5);      
+        if (loginText)
+            user.login = reinterpret_cast<const char *>(loginText);
+
+        if (passText)
+            user.password = reinterpret_cast<const char *>(passText);
     }
 
-    if (stmt) sqlite3_finalize(stmt);
+    sqlite3_finalize(stmt);
     return user;
 }
 
@@ -270,8 +257,6 @@ double Database::getBalanceByUser(int user_id) {
 
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
         std::cerr << "Prepare failed: " << sqlite3_errmsg(db) << "\n";
-        if (stmt)
-            sqlite3_finalize(stmt);
         return balance;
     }
 
@@ -291,8 +276,7 @@ double Database::getBalanceByUser(int user_id) {
             balance -= amount;
     }
 
-    if (stmt)
-        sqlite3_finalize(stmt);
+    sqlite3_finalize(stmt);
     return balance;
 }
 
@@ -325,8 +309,7 @@ std::vector<Transaction> Database::getTransactionsByCategory(int user_id, const 
         result.push_back(t);
     }
 
-    if (stmt)
-        sqlite3_finalize(stmt);
+    sqlite3_finalize(stmt);
     return result;
 }
 
@@ -495,9 +478,9 @@ double Database::getSpentByCategory(int user_id, const std::string &category, co
     return spent;
 }
 
-bool Database::addGoal(int user_id, const std::string &name, double target_amount) {
-    std::string sql = "INSERT INTO goals (user_id, name, target_amount, current_amount) "
-                      "VALUES (?, ?, ?, 0);";
+bool Database::addGoal(int user_id, const std::string &name, double target_amount, const std::string &deadline) {
+    std::string sql = "INSERT INTO goals (user_id, name, target_amount, current_amount, deadline) "
+                      "VALUES (?, ?, ?, 0, ?);";
 
     sqlite3_stmt *stmt = nullptr;
 
@@ -509,6 +492,7 @@ bool Database::addGoal(int user_id, const std::string &name, double target_amoun
     sqlite3_bind_int(stmt, 1, user_id);
     sqlite3_bind_text(stmt, 2, name.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_double(stmt, 3, target_amount);
+    sqlite3_bind_text(stmt, 4, deadline.c_str(), -1, SQLITE_TRANSIENT);
 
     bool success = sqlite3_step(stmt) == SQLITE_DONE;
 
@@ -519,7 +503,7 @@ bool Database::addGoal(int user_id, const std::string &name, double target_amoun
 std::vector<Goal> Database::getGoalsByUser(int user_id) {
     std::vector<Goal> result;
 
-    std::string sql = "SELECT id, user_id, name, target_amount, current_amount "
+    std::string sql = "SELECT id, user_id, name, target_amount, current_amount, deadline "
                       "FROM goals WHERE user_id = ?;";
 
     sqlite3_stmt *stmt = nullptr;
@@ -543,6 +527,9 @@ std::vector<Goal> Database::getGoalsByUser(int user_id) {
         g.target_amount = sqlite3_column_double(stmt, 3);
         g.current_amount = sqlite3_column_double(stmt, 4);
 
+        const unsigned char *deadlineText = sqlite3_column_text(stmt, 5);
+        g.deadline = deadlineText ? reinterpret_cast<const char *>(deadlineText) : "";
+
         result.push_back(g);
     }
 
@@ -562,6 +549,46 @@ bool Database::updateGoalProgress(int goal_id, double current_amount) {
 
     sqlite3_bind_double(stmt, 1, current_amount);
     sqlite3_bind_int(stmt, 2, goal_id);
+
+    bool success = sqlite3_step(stmt) == SQLITE_DONE;
+
+    sqlite3_finalize(stmt);
+    return success;
+}
+
+bool Database::updateGoal(int goal_id, const std::string &name, double target_amount, const std::string &deadline) {
+    std::string sql = "UPDATE goals "
+                      "SET name = ?, target_amount = ?, deadline = ? "
+                      "WHERE id = ?;";
+
+    sqlite3_stmt *stmt = nullptr;
+
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Prepare failed: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_text(stmt, 1, name.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_double(stmt, 2, target_amount);
+    sqlite3_bind_text(stmt, 3, deadline.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 4, goal_id);
+
+    bool success = sqlite3_step(stmt) == SQLITE_DONE;
+
+    sqlite3_finalize(stmt);
+    return success;
+}
+
+bool Database::deleteGoal(int goal_id) {
+    std::string sql = "DELETE FROM goals WHERE id = ?;";
+    sqlite3_stmt *stmt = nullptr;
+
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Prepare failed: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, goal_id);
 
     bool success = sqlite3_step(stmt) == SQLITE_DONE;
 
@@ -591,6 +618,36 @@ int Database::createGroup(const std::string &name, int owner_id) {
     return static_cast<int>(sqlite3_last_insert_rowid(db));
 }
 
+bool Database::deleteGroup(int group_id) {
+    char *errMsg = nullptr;
+
+    std::string deleteMembers = "DELETE FROM group_members WHERE group_id = " + std::to_string(group_id) + ";";
+
+    std::string deleteTransactions = "DELETE FROM transactions WHERE group_id = " + std::to_string(group_id) + ";";
+
+    std::string deleteGroup = "DELETE FROM groups WHERE id = " + std::to_string(group_id) + ";";
+
+    if (sqlite3_exec(db, deleteMembers.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        std::cerr << "Failed to delete group members: " << errMsg << "\n";
+        sqlite3_free(errMsg);
+        return false;
+    }
+
+    if (sqlite3_exec(db, deleteTransactions.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        std::cerr << "Failed to delete group transactions: " << errMsg << "\n";
+        sqlite3_free(errMsg);
+        return false;
+    }
+
+    if (sqlite3_exec(db, deleteGroup.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK) {
+        std::cerr << "Failed to delete group: " << errMsg << "\n";
+        sqlite3_free(errMsg);
+        return false;
+    }
+
+    return true;
+}
+
 bool Database::addUserToGroup(int group_id, int user_id) {
     std::string sql = "INSERT OR IGNORE INTO group_members (group_id, user_id) VALUES (?, ?);";
     sqlite3_stmt *stmt = nullptr;
@@ -607,6 +664,61 @@ bool Database::addUserToGroup(int group_id, int user_id) {
 
     sqlite3_finalize(stmt);
     return success;
+}
+
+bool Database::removeUserFromGroup(int group_id, int user_id) {
+    std::string sql = "DELETE FROM group_members "
+                      "WHERE group_id = ? AND user_id = ?;";
+
+    sqlite3_stmt *stmt = nullptr;
+
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Prepare failed: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, group_id);
+    sqlite3_bind_int(stmt, 2, user_id);
+
+    bool success = sqlite3_step(stmt) == SQLITE_DONE;
+
+    sqlite3_finalize(stmt);
+    return success;
+}
+
+std::vector<User> Database::getGroupMembers(int group_id) {
+    std::vector<User> result;
+
+    std::string sql = "SELECT u.id, u.login, u.password "
+                      "FROM users u "
+                      "JOIN group_members gm ON u.id = gm.user_id "
+                      "WHERE gm.group_id = ?;";
+
+    sqlite3_stmt *stmt = nullptr;
+
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Prepare failed: " << sqlite3_errmsg(db) << "\n";
+        return result;
+    }
+
+    sqlite3_bind_int(stmt, 1, group_id);
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        User user;
+
+        user.id = sqlite3_column_int(stmt, 0);
+
+        const unsigned char *loginText = sqlite3_column_text(stmt, 1);
+        user.login = loginText ? reinterpret_cast<const char *>(loginText) : "";
+
+        const unsigned char *passwordText = sqlite3_column_text(stmt, 2);
+        user.password = passwordText ? reinterpret_cast<const char *>(passwordText) : "";
+
+        result.push_back(user);
+    }
+
+    sqlite3_finalize(stmt);
+    return result;
 }
 
 std::vector<Group> Database::getUserGroups(int user_id) {
@@ -641,6 +753,27 @@ std::vector<Group> Database::getUserGroups(int user_id) {
 
     sqlite3_finalize(stmt);
     return result;
+}
+
+bool Database::isUserInGroup(int group_id, int user_id) {
+    std::string sql = "SELECT 1 FROM group_members "
+                      "WHERE group_id = ? AND user_id = ? "
+                      "LIMIT 1;";
+
+    sqlite3_stmt *stmt = nullptr;
+
+    if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
+        std::cerr << "Prepare failed: " << sqlite3_errmsg(db) << "\n";
+        return false;
+    }
+
+    sqlite3_bind_int(stmt, 1, group_id);
+    sqlite3_bind_int(stmt, 2, user_id);
+
+    bool exists = sqlite3_step(stmt) == SQLITE_ROW;
+
+    sqlite3_finalize(stmt);
+    return exists;
 }
 
 bool Database::addGroupTransaction(

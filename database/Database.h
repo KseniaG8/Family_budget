@@ -3,12 +3,11 @@
 #include "../models/Group.h"
 #include "../models/Transaction.h"
 #include "../models/User.h"
-#include "../models/Goal.h"
 #include <sqlite3.h>
 #include <vector>
 
 class Database {
-public:
+  public:
     Database(const std::string &db_name);
     ~Database();
 
@@ -16,15 +15,13 @@ public:
 
     void addTransaction(const Transaction &t);
     std::vector<Transaction> getTransactionsByUser(int user_id);
-    std::vector<Transaction> getTransactionsByCategory(int user_id, const std::string &category);
-    bool updateTransaction(int transaction_id, const std::string &type, double amount, const std::string &category);
-    bool deleteTransaction(int transaction_id);
-    Transaction getTransactionById(int transaction_id);
+
     void clearTransactions();
 
     bool addUser(const std::string &login, const std::string &password);
     User getUserByLogin(const std::string &login);
-    bool enable2FA(int user_id, const std::string &secret);
+
+    bool updateTransaction(int transaction_id, const std::string &type, double amount, const std::string &category);
 
     double getBalanceByUser(int user_id);
 
@@ -38,17 +35,29 @@ public:
     double getLimit(int user_id, const std::string &category, const std::string &period);
     double getSpentByCategory(int user_id, const std::string &category, const std::string &period);
 
-    bool addGoal(int user_id, const std::string &name, double target_amount);
+    bool addGoal(int user_id, const std::string &name, double target_amount, const std::string &deadline);
 
     std::vector<Goal> getGoalsByUser(int user_id);
 
     bool updateGoalProgress(int goal_id, double current_amount);
 
+    bool updateGoal(int goal_id, const std::string &name, double target_amount, const std::string &deadline);
+
+    bool deleteGoal(int goal_id);
+
     int createGroup(const std::string &name, int owner_id);
+
+    bool deleteGroup(int group_id);
 
     bool addUserToGroup(int group_id, int user_id);
 
+    bool removeUserFromGroup(int group_id, int user_id);
+
+    std::vector<User> getGroupMembers(int group_id);
+
     std::vector<Group> getUserGroups(int user_id);
+
+    bool isUserInGroup(int group_id, int user_id);
 
     bool
     addGroupTransaction(int group_id, int user_id, const std::string &type, double amount, const std::string &category);
@@ -57,14 +66,6 @@ public:
 
     double getGroupBalance(int group_id);
 
-    int createFamily(const std::string &family_name);
-    bool joinFamily(int user_id, int family_id);
-    int getUserFamilyId(int user_id);
-
-    bool addGoal(int family_id, const std::string &name, double target_amount);
-    std::vector<Goal> getGoalsByFamily(int family_id);
-    bool addMoneyToGoal(int goal_id, double amount);
-
-private:
+  private:
     sqlite3 *db = nullptr;
 };

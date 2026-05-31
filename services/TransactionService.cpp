@@ -1,6 +1,4 @@
 #include "TransactionService.h"
-#include "MLCategorizer.h"
-#include <spdlog/spdlog.h>
 
 TransactionService::TransactionService(Database &db) : database(db) {}
 
@@ -12,32 +10,14 @@ std::vector<Transaction> TransactionService::getTransactionsByCategory(int user_
     return database.getTransactionsByCategory(user_id, category);
 }
 
-void TransactionService::addTransaction(int user_id, std::string type,
-                                        double amount, std::string category, 
-                                        std::string currency,
-                                        std::string description) {
+void TransactionService::addTransaction(int user_id, std::string type, double amount, std::string category) {
+    Transaction t;
+    t.user_id = user_id;
+    t.type = type;
+    t.amount = amount;
+    t.category = category;
 
-  if (category.empty() && !description.empty()) {
-      auto history = database.getTransactionsByUser(user_id);
-      MLCategorizer ml;
-      ml.train(history);
-      category = ml.predictCategory(description); 
-
-      spdlog::info("ML Auto-categorized '{}' as '{}' for user {}", description, category, user_id);
-      
-  } else if (category.empty()) {
-      category = "Разное";
-  }
-
-  Transaction t;
-  t.user_id = user_id;
-  t.type = type;
-  t.amount = amount;
-  t.category = category; 
-  t.currency = currency; 
-  t.description = description; 
-
-  database.addTransaction(t);
+    database.addTransaction(t);
 }
 
 double TransactionService::getBalance(int user_id) { return database.getBalanceByUser(user_id); }
@@ -70,8 +50,11 @@ double TransactionService::getSpentByCategory(int user_id, const std::string &ca
     return database.getSpentByCategory(user_id, category, period);
 }
 
-bool TransactionService::addGoal(int user_id, const std::string &name, double target_amount) {
-    return database.addGoal(user_id, name, target_amount);
+bool TransactionService::addGoal(int user_id,
+                                 const std::string &name,
+                                 double target_amount,
+                                 const std::string &deadline) {
+    return database.addGoal(user_id, name, target_amount, deadline);
 }
 
 std::vector<Goal> TransactionService::getGoals(int user_id) { return database.getGoalsByUser(user_id); }
@@ -79,6 +62,15 @@ std::vector<Goal> TransactionService::getGoals(int user_id) { return database.ge
 bool TransactionService::updateGoalProgress(int goal_id, double current_amount) {
     return database.updateGoalProgress(goal_id, current_amount);
 }
+
+bool TransactionService::updateGoal(int goal_id,
+                                    const std::string &name,
+                                    double target_amount,
+                                    const std::string &deadline) {
+    return database.updateGoal(goal_id, name, target_amount, deadline);
+}
+
+bool TransactionService::deleteGoal(int goal_id) { return database.deleteGoal(goal_id); }
 
 int TransactionService::createGroup(const std::string &name, int owner_id) {
     int group_id = database.createGroup(name, owner_id);
@@ -90,11 +82,21 @@ int TransactionService::createGroup(const std::string &name, int owner_id) {
     return group_id;
 }
 
+bool TransactionService::deleteGroup(int group_id) { return database.deleteGroup(group_id); }
+
 bool TransactionService::addUserToGroup(int group_id, int user_id) {
     return database.addUserToGroup(group_id, user_id);
 }
 
+bool TransactionService::removeUserFromGroup(int group_id, int user_id) {
+    return database.removeUserFromGroup(group_id, user_id);
+}
+
+std::vector<User> TransactionService::getGroupMembers(int group_id) { return database.getGroupMembers(group_id); }
+
 std::vector<Group> TransactionService::getUserGroups(int user_id) { return database.getUserGroups(user_id); }
+
+bool TransactionService::isUserInGroup(int group_id, int user_id) { return database.isUserInGroup(group_id, user_id); }
 
 bool TransactionService::addGroupTransaction(
     int group_id, int user_id, const std::string &type, double amount, const std::string &category) {
