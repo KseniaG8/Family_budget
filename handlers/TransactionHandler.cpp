@@ -26,12 +26,10 @@ nlohmann::json TransactionHandler::getTransactionsByCategory(int user_id, const 
     return response;
 }
 
-nlohmann::json TransactionHandler::addTransaction(int user_id, std::string type,
-                                                  double amount, std::string category, 
-                                                  std::string currency, 
-                                                  std::string description) {
-  service.addTransaction(user_id, type, amount, category, currency, description);
-  return {{"status", "success"}};
+nlohmann::json TransactionHandler::addTransaction(int user_id, std::string type, double amount, std::string category) {
+    service.addTransaction(user_id, type, amount, category);
+
+    return {{"status", "success"}};
 }
 
 nlohmann::json TransactionHandler::getBalance(int user_id) {
@@ -104,8 +102,17 @@ nlohmann::json TransactionHandler::checkLimit(int user_id, const std::string &ca
             {"exceeded", spent > limit}};
 }
 
-nlohmann::json TransactionHandler::addGoal(int user_id, const std::string &name, double target_amount) {
-    return service.addGoal(user_id, name, target_amount);
+nlohmann::json
+TransactionHandler::addGoal(int user_id, const std::string &name, double target_amount, const std::string &deadline) {
+    bool success = service.addGoal(user_id, name, target_amount, deadline);
+
+    return {{"status", success ? "success" : "error"}};
+}
+
+nlohmann::json TransactionHandler::deleteGoal(int goal_id) {
+    bool success = service.deleteGoal(goal_id);
+
+    return {{"status", success ? "success" : "error"}};
 }
 
 nlohmann::json TransactionHandler::getGoals(int user_id) {
@@ -114,13 +121,14 @@ nlohmann::json TransactionHandler::getGoals(int user_id) {
     nlohmann::json response = nlohmann::json::array();
 
     for (auto &g : goals) {
-        response.push_back(
-            {{"id", g.id},
-             {"user_id", g.user_id},
-             {"name", g.name},
-             {"target_amount", g.target_amount},
-             {"current_amount", g.current_amount},
-             {"progress_percent", g.target_amount > 0 ? (g.current_amount / g.target_amount) * 100 : 0}});
+        response.push_back({{"id", g.id},
+                            {"user_id", g.user_id},
+                            {"name", g.name},
+                            {"target_amount", g.target_amount},
+                            {"current_amount", g.current_amount},
+                            {"progress_percent", g.target_amount > 0 ? (g.current_amount / g.target_amount) * 100 : 0},
+                            {"deadline", g.deadline},
+                            {"remaining", g.target_amount - g.current_amount}});
     }
 
     return response;
@@ -128,6 +136,15 @@ nlohmann::json TransactionHandler::getGoals(int user_id) {
 
 nlohmann::json TransactionHandler::updateGoalProgress(int goal_id, double current_amount) {
     return service.updateGoalProgress(goal_id, current_amount);
+}
+
+nlohmann::json TransactionHandler::updateGoal(int goal_id,
+                                              const std::string &name,
+                                              double target_amount,
+                                              const std::string &deadline) {
+    bool success = service.updateGoal(goal_id, name, target_amount, deadline);
+
+    return {{"status", success ? "success" : "error"}};
 }
 
 nlohmann::json TransactionHandler::createGroup(const std::string &name, int owner_id) {
@@ -140,10 +157,34 @@ nlohmann::json TransactionHandler::createGroup(const std::string &name, int owne
     return {{"status", "success"}, {"group_id", group_id}};
 }
 
+nlohmann::json TransactionHandler::deleteGroup(int group_id) {
+    bool success = service.deleteGroup(group_id);
+
+    return {{"status", success ? "success" : "error"}};
+}
+
 nlohmann::json TransactionHandler::addUserToGroup(int group_id, int user_id) {
     bool success = service.addUserToGroup(group_id, user_id);
 
     return {{"status", success ? "success" : "error"}};
+}
+
+nlohmann::json TransactionHandler::removeUserFromGroup(int group_id, int user_id) {
+    bool success = service.removeUserFromGroup(group_id, user_id);
+
+    return {{"status", success ? "success" : "error"}};
+}
+
+nlohmann::json TransactionHandler::getGroupMembers(int group_id) {
+    auto members = service.getGroupMembers(group_id);
+
+    nlohmann::json response = nlohmann::json::array();
+
+    for (const auto &user : members) {
+        response.push_back({{"id", user.id}, {"login", user.login}});
+    }
+
+    return response;
 }
 
 nlohmann::json TransactionHandler::getUserGroups(int user_id) {
@@ -160,6 +201,10 @@ nlohmann::json TransactionHandler::getUserGroups(int user_id) {
 
 nlohmann::json TransactionHandler::addGroupTransaction(
     int group_id, int user_id, const std::string &type, double amount, const std::string &category) {
+    if (!service.isUserInGroup(group_id, user_id)) {
+        return {{"status", "error"}, {"message", "User is not a member of this group"}};
+    }
+
     bool success = service.addGroupTransaction(group_id, user_id, type, amount, category);
 
     return {{"status", success ? "success" : "error"}};
