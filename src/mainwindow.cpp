@@ -4,6 +4,7 @@
 #include "../inc/registrationdialog.h"
 #include "../inc/budgetlimitsdialog.h"
 #include "../inc/goalsdialog.h"
+#include "../inc/groupsdialog.h"
 
 #include <QMessageBox>
 #include <QDebug>
@@ -38,6 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->pushButton_2, &QPushButton::clicked, this, &MainWindow::onAllTransactionsClicked);
     connect(ui->limitsButton, &QPushButton::clicked, this, &MainWindow::onLimitsClicked);
     connect(ui->goalsButton, &QPushButton::clicked, this, &MainWindow::onGoalsButtonClicked);
+    connect(ui->groupsButton, &QPushButton::clicked, this, &MainWindow::onGroupsClicked);
 }
 
 void MainWindow::sendGetRequest(const QString &endpoint)
@@ -257,6 +259,13 @@ void MainWindow::checkBudgetLimit(const QString &category)
 void MainWindow::onGoalsButtonClicked()
 {
     GoalsDialog *dialog = new GoalsDialog(this, currentUserId, baseUrl);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->exec();
+}
+
+void MainWindow::onGroupsClicked()
+{
+    GroupsDialog *dialog = new GroupsDialog(this, currentUserId, baseUrl);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->exec();
 }
