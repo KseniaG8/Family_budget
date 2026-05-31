@@ -4,9 +4,9 @@
 #include <QDialog>
 #include <QNetworkAccessManager>
 
-namespace Ui {
-class BudgetLimitsDialog;
-}
+QT_BEGIN_NAMESPACE
+namespace Ui { class BudgetLimitsDialog; }
+QT_END_NAMESPACE
 
 class BudgetLimitsDialog : public QDialog
 {

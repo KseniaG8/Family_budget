@@ -8,4 +8,6 @@ struct Transaction {
   std::string type;
   double amount;
   std::string category;
+  std::string currency;    
+  std::string description; 
 };

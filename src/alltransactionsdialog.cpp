@@ -4,6 +4,7 @@
 #include <QJsonObject>
 #include <QMessageBox>
 #include <QDebug>
+#include <QNetworkReply>
 
 AllTransactionsDialog::AllTransactionsDialog(QWidget *parent, int userId, const QString &baseUrl)
     : QDialog(parent)

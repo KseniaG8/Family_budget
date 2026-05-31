@@ -4,6 +4,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QUrl>
+#include <QNetworkReply>
 
 BudgetLimitsDialog::BudgetLimitsDialog(QWidget *parent, int userId, const QString &baseUrl)
     : QDialog(parent)
@@ -17,7 +18,7 @@ BudgetLimitsDialog::BudgetLimitsDialog(QWidget *parent, int userId, const QStrin
     networkManager = new QNetworkAccessManager(this);
     connect(networkManager, &QNetworkAccessManager::finished, this, &BudgetLimitsDialog::onReplyFinished);
 
-    connect(ui->saveButton, &QPushButton::clicked, this, &BudgetLimitsDialog::onSaveClicked);
+    connect(ui->saveButton, &QPushButton::clicked, this, &BudgetLimitsDialog::onSavedClicked);
     connect(ui->checkButton, &QPushButton::clicked, this, &BudgetLimitsDialog::onCheckClicked);
     connect(ui->categoryCombo, &QComboBox::currentTextChanged, this, &BudgetLimitsDialog::loadCurrentLimit);
 }
@@ -50,7 +51,7 @@ void BudgetLimitsDialog::loadCurrentLimit(const QString &category)
     sendGetRequest(QString("/limits/check?user_id=%1&category=%2").arg(currentUserId).arg(category));
 }
 
-void BudgetLimitsDialog::onSaveClicked()
+void BudgetLimitsDialog::onSavedClicked()
 {
     QString category = ui->categoryCombo->currentText();
     double limit = ui->limitSpin->value();
@@ -72,7 +73,7 @@ void BudgetLimitsDialog::onCheckClicked()
 void BudgetLimitsDialog::onReplyFinished(QNetworkReply *reply)
 {
     if (reply->error() != QNetworkReply::NoError) {
-        ui->statusLabel->setText("Ошибка: " + reply->errorString());
+        QMessageBox::warning(this, "Ошибка", "Ошибка сети: " + reply->errorString());
         reply->deleteLater();
         return;
     }
@@ -93,16 +94,16 @@ void BudgetLimitsDialog::onReplyFinished(QNetworkReply *reply)
     }
     else if (url.contains("/limits/check")) {
         if (obj.contains("error")) {
-            ui->statusLabel->setText("Ошибка: " + obj["error"].toString());
+            QMessageBox::warning(this, "Ошибка", obj["error"].toString());
         } else {
             double limit = obj["limit"].toDouble();
             double spent = obj["spent"].toDouble();
             double remaining = obj["remaining"].toDouble();
 
-            ui->statusLabel->setText(
-                QString("Лимит: %1\nПотрачено: %2\nОсталось: %3")
-                    .arg(limit).arg(spent).arg(remaining)
-                );
+            QString message = QString("Лимит: %1\nПотрачено: %2\nОсталось: %3")
+                                  .arg(limit).arg(spent).arg(remaining);
+
+            QMessageBox::information(this, "Информация", message);
 
             ui->limitSpin->setValue(limit);
         }
