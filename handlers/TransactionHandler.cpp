@@ -1,324 +1,233 @@
-#include "Session.h"
-#include <iostream>
+#include "TransactionHandler.h"
 
-namespace beast = boost::beast;
-namespace http = beast::http;
-using tcp = boost::asio::ip::tcp;
-using json = nlohmann::json;
+TransactionHandler::TransactionHandler(TransactionService &service) : service(service) {}
 
-Session::Session(tcp::socket socket, UserHandler &userHandler, TransactionHandler &transactionHandler)
-    : socket_(std::move(socket)), userHandler_(userHandler), transactionHandler_(transactionHandler) {}
+nlohmann::json TransactionHandler::getTransactions(int user_id) {
+    auto transactions = service.getUserTransactions(user_id);
 
-void Session::start() { read_request(); }
+    nlohmann::json response = nlohmann::json::array();
 
-void Session::read_request() {
-    auto self = shared_from_this();
+    for (auto &t : transactions) {
+        response.push_back({{"id", t.id}, {"type", t.type}, {"amount", t.amount}, {"category", t.category}});
+    }
 
-    http::async_read(socket_, buffer_, request_, [self](beast::error_code ec, std::size_t) {
-        if (!ec) {
-            self->handle_request();
-        }
-    });
+    return response;
 }
 
-void Session::handle_request() {
-    try {
-        std::string target = std::string(request_.target());
+nlohmann::json TransactionHandler::getTransactionsByCategory(int user_id, const std::string &category) {
+    auto transactions = service.getTransactionsByCategory(user_id, category);
 
-        if (request_.method() == http::verb::post && target == "/register") {
-            json body = json::parse(request_.body());
+    nlohmann::json response = nlohmann::json::array();
 
-            auto result = userHandler_.registerUser(body["login"], body["password"]);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::post && target == "/login") {
-            json body = json::parse(request_.body());
-
-            auto result = userHandler_.loginUser(body["login"], body["password"]);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::post && target == "/transactions") {
-            json body = json::parse(request_.body());
-
-            std::string category = body.contains("category") ? body["category"].get<std::string>() : "";
-
-            auto result = transactionHandler_.addTransaction(body["user_id"], body["type"], body["amount"], category);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::get && target.find("/transactions?") == 0) {
-            int user_id = std::stoi(get_query_param(target, "user_id"));
-
-            auto result = transactionHandler_.getTransactions(user_id);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::get && target.find("/balance?") == 0) {
-            int user_id = std::stoi(get_query_param(target, "user_id"));
-
-            auto result = transactionHandler_.getBalance(user_id);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::get && target.find("/transactions/category?") == 0) {
-            int user_id = std::stoi(get_query_param(target, "user_id"));
-            std::string category = get_query_param(target, "category");
-
-            auto result = transactionHandler_.getTransactionsByCategory(user_id, category);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::put && target == "/transactions") {
-
-            json body = json::parse(request_.body());
-
-            auto result = transactionHandler_.updateTransaction(
-                body["transaction_id"], body["type"], body["amount"], body["category"]);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::delete_ && target.find("/transactions?") == 0) {
-
-            int transaction_id = std::stoi(get_query_param(target, "id"));
-
-            auto result = transactionHandler_.deleteTransaction(transaction_id);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::get && target.find("/transaction?") == 0) {
-
-            int transaction_id = std::stoi(get_query_param(target, "id"));
-
-            auto result = transactionHandler_.getTransactionById(transaction_id);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::post && target == "/limits") {
-            json body = json::parse(request_.body());
-
-            auto result =
-                transactionHandler_.setLimit(body["user_id"], body["category"], body["limit"], body["period"]);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::get && target.find("/limits/check?") == 0) {
-
-            int user_id = std::stoi(get_query_param(target, "user_id"));
-            std::string category = get_query_param(target, "category");
-            std::string period = get_query_param(target, "period");
-
-            auto result = transactionHandler_.checkLimit(user_id, category, period);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::post && target == "/goals") {
-            json body = json::parse(request_.body());
-
-            auto result =
-                transactionHandler_.addGoal(body["user_id"], body["name"], body["target_amount"], body["deadline"]);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::get && target.find("/goals?") == 0) {
-
-            int user_id = std::stoi(get_query_param(target, "user_id"));
-
-            auto result = transactionHandler_.getGoals(user_id);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::put && target == "/goals/progress") {
-
-            json body = json::parse(request_.body());
-
-            auto result = transactionHandler_.updateGoalProgress(body["goal_id"], body["current_amount"]);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::put && target == "/goals") {
-            json body = json::parse(request_.body());
-
-            auto result =
-                transactionHandler_.updateGoal(body["goal_id"], body["name"], body["target_amount"], body["deadline"]);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::delete_ && target.find("/goals?") == 0) {
-
-            int goal_id = std::stoi(get_query_param(target, "id"));
-
-            auto result = transactionHandler_.deleteGoal(goal_id);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::post && target == "/groups") {
-            json body = json::parse(request_.body());
-
-            auto result = transactionHandler_.createGroup(body["name"], body["owner_id"]);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::delete_ && target.find("/groups?") == 0) {
-
-            int group_id = std::stoi(get_query_param(target, "id"));
-
-            auto result = transactionHandler_.deleteGroup(group_id);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::post && target == "/groups/members") {
-            json body = json::parse(request_.body());
-
-            auto result = transactionHandler_.addUserToGroup(body["group_id"], body["user_id"]);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::delete_ && target.find("/groups/members?") == 0) {
-
-            int group_id = std::stoi(get_query_param(target, "group_id"));
-
-            int user_id = std::stoi(get_query_param(target, "user_id"));
-
-            auto result = transactionHandler_.removeUserFromGroup(group_id, user_id);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::get && target.find("/groups/members?") == 0) {
-
-            int group_id = std::stoi(get_query_param(target, "group_id"));
-
-            auto result = transactionHandler_.getGroupMembers(group_id);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::get && target.find("/groups?") == 0) {
-
-            int user_id = std::stoi(get_query_param(target, "user_id"));
-
-            auto result = transactionHandler_.getUserGroups(user_id);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::post && target == "/groups/transactions") {
-            json body = json::parse(request_.body());
-
-            std::string category = body.contains("category") ? body["category"].get<std::string>() : "";
-
-            auto result = transactionHandler_.addGroupTransaction(
-                body["group_id"], body["user_id"], body["type"], body["amount"], category);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::get && target.find("/groups/transactions?") == 0) {
-
-            int group_id = std::stoi(get_query_param(target, "group_id"));
-
-            auto result = transactionHandler_.getGroupTransactions(group_id);
-
-            send_response(result);
-            return;
-        }
-
-        if (request_.method() == http::verb::get && target.find("/groups/balance?") == 0) {
-
-            int group_id = std::stoi(get_query_param(target, "group_id"));
-
-            auto result = transactionHandler_.getGroupBalance(group_id);
-
-            send_response(result);
-            return;
-        }
-
-        send_response({{"status", "error"}, {"message", "Unknown endpoint"}}, http::status::not_found);
-
-    } catch (const std::exception &e) {
-        send_response({{"status", "error"}, {"message", e.what()}}, http::status::bad_request);
+    for (auto &t : transactions) {
+        response.push_back({{"id", t.id}, {"type", t.type}, {"amount", t.amount}, {"category", t.category}});
     }
+
+    return response;
 }
 
-void Session::send_response(const json &body, http::status status) {
-    auto self = shared_from_this();
+nlohmann::json TransactionHandler::addTransaction(int user_id, std::string type, double amount, std::string category) {
+    service.addTransaction(user_id, type, amount, category);
 
-    response_.version(request_.version());
-    response_.result(status);
-    response_.set(http::field::server, "FamilyBudgetServer");
-    response_.set(http::field::content_type, "application/json");
-    response_.body() = body.dump();
-    response_.prepare_payload();
-
-    http::async_write(socket_, response_, [self](beast::error_code ec, std::size_t) {
-        self->socket_.shutdown(tcp::socket::shutdown_send, ec);
-    });
+    return {{"status", "success"}};
 }
 
-std::string Session::get_query_param(const std::string &target, const std::string &key) {
-    auto question_pos = target.find('?');
-    if (question_pos == std::string::npos) {
-        return "";
+nlohmann::json TransactionHandler::getBalance(int user_id) {
+    double balance = service.getBalance(user_id);
+
+    return {{"status", "success"}, {"balance", balance}};
+}
+
+nlohmann::json TransactionHandler::updateTransaction(int transaction_id,
+                                                     const std::string &type,
+                                                     double amount,
+                                                     const std::string &category) {
+    bool success = service.updateTransaction(transaction_id, type, amount, category);
+
+    if (success) {
+        return {{"status", "success"}};
     }
 
-    std::string query = target.substr(question_pos + 1);
-    std::string search = key + "=";
+    return {{"status", "error"}};
+}
 
-    auto key_pos = query.find(search);
-    if (key_pos == std::string::npos) {
-        return "";
+nlohmann::json TransactionHandler::deleteTransaction(int transaction_id) {
+    bool success = service.deleteTransaction(transaction_id);
+
+    if (success) {
+        return {{"status", "success"}};
     }
 
-    auto value_start = key_pos + search.length();
-    auto value_end = query.find('&', value_start);
+    return {{"status", "error"}};
+}
 
-    if (value_end == std::string::npos) {
-        return query.substr(value_start);
+nlohmann::json TransactionHandler::getTransactionById(int transaction_id) {
+    Transaction t = service.getTransactionById(transaction_id);
+
+    if (t.id == -1) {
+        return {{"status", "error"}, {"message", "Transaction not found"}};
     }
 
-    return query.substr(value_start, value_end - value_start);
+    return {{"status", "success"},
+            {"transaction",
+             {{"id", t.id}, {"user_id", t.user_id}, {"type", t.type}, {"amount", t.amount}, {"category", t.category}}}};
+}
+
+nlohmann::json
+TransactionHandler::setLimit(int user_id, const std::string &category, double limit_amount, const std::string &period) {
+    bool success = service.setLimit(user_id, category, limit_amount, period);
+
+    if (success) {
+        return {{"status", "success"}};
+    }
+
+    return {{"status", "error"}};
+}
+
+nlohmann::json TransactionHandler::checkLimit(int user_id, const std::string &category, const std::string &period) {
+    double limit = service.getLimit(user_id, category, period);
+
+    if (limit < 0) {
+        return {{"status", "error"}, {"message", "Limit not found"}};
+    }
+
+    double spent = service.getSpentByCategory(user_id, category, period);
+
+    return {{"status", "success"},
+            {"category", category},
+            {"period", period},
+            {"limit", limit},
+            {"spent", spent},
+            {"remaining", limit - spent},
+            {"exceeded", spent > limit}};
+}
+
+nlohmann::json
+TransactionHandler::addGoal(int user_id, const std::string &name, double target_amount, const std::string &deadline) {
+    bool success = service.addGoal(user_id, name, target_amount, deadline);
+
+    return {{"status", success ? "success" : "error"}};
+}
+
+nlohmann::json TransactionHandler::deleteGoal(int goal_id) {
+    bool success = service.deleteGoal(goal_id);
+
+    return {{"status", success ? "success" : "error"}};
+}
+
+nlohmann::json TransactionHandler::getGoals(int user_id) {
+    auto goals = service.getGoals(user_id);
+
+    nlohmann::json response = nlohmann::json::array();
+
+    for (auto &g : goals) {
+        response.push_back({{"id", g.id},
+                            {"user_id", g.user_id},
+                            {"name", g.name},
+                            {"target_amount", g.target_amount},
+                            {"current_amount", g.current_amount},
+                            {"progress_percent", g.target_amount > 0 ? (g.current_amount / g.target_amount) * 100 : 0},
+                            {"deadline", g.deadline},
+                            {"remaining", g.target_amount - g.current_amount}});
+    }
+
+    return response;
+}
+
+nlohmann::json TransactionHandler::updateGoalProgress(int goal_id, double current_amount) {
+    return service.updateGoalProgress(goal_id, current_amount);
+}
+
+nlohmann::json TransactionHandler::updateGoal(int goal_id,
+                                              const std::string &name,
+                                              double target_amount,
+                                              const std::string &deadline) {
+    bool success = service.updateGoal(goal_id, name, target_amount, deadline);
+
+    return {{"status", success ? "success" : "error"}};
+}
+
+nlohmann::json TransactionHandler::createGroup(const std::string &name, int owner_id) {
+    int group_id = service.createGroup(name, owner_id);
+
+    if (group_id == -1) {
+        return {{"status", "error"}, {"message", "Failed to create group"}};
+    }
+
+    return {{"status", "success"}, {"group_id", group_id}};
+}
+
+nlohmann::json TransactionHandler::deleteGroup(int group_id) {
+    bool success = service.deleteGroup(group_id);
+
+    return {{"status", success ? "success" : "error"}};
+}
+
+nlohmann::json TransactionHandler::addUserToGroup(int group_id, int user_id) {
+    bool success = service.addUserToGroup(group_id, user_id);
+
+    return {{"status", success ? "success" : "error"}};
+}
+
+nlohmann::json TransactionHandler::removeUserFromGroup(int group_id, int user_id) {
+    bool success = service.removeUserFromGroup(group_id, user_id);
+
+    return {{"status", success ? "success" : "error"}};
+}
+
+nlohmann::json TransactionHandler::getGroupMembers(int group_id) {
+    auto members = service.getGroupMembers(group_id);
+
+    nlohmann::json response = nlohmann::json::array();
+
+    for (const auto &user : members) {
+        response.push_back({{"id", user.id}, {"login", user.login}});
+    }
+
+    return response;
+}
+
+nlohmann::json TransactionHandler::getUserGroups(int user_id) {
+    auto groups = service.getUserGroups(user_id);
+
+    nlohmann::json response = nlohmann::json::array();
+
+    for (const auto &g : groups) {
+        response.push_back({{"id", g.id}, {"name", g.name}, {"owner_id", g.owner_id}});
+    }
+
+    return response;
+}
+
+nlohmann::json TransactionHandler::addGroupTransaction(
+    int group_id, int user_id, const std::string &type, double amount, const std::string &category) {
+    if (!service.isUserInGroup(group_id, user_id)) {
+        return {{"status", "error"}, {"message", "User is not a member of this group"}};
+    }
+
+    bool success = service.addGroupTransaction(group_id, user_id, type, amount, category);
+
+    return {{"status", success ? "success" : "error"}};
+}
+nlohmann::json TransactionHandler::getGroupTransactions(int group_id) {
+    auto transactions = service.getGroupTransactions(group_id);
+
+    nlohmann::json response = nlohmann::json::array();
+
+    for (const auto &t : transactions) {
+        response.push_back({{"id", t.id},
+                            {"user_id", t.user_id},
+                            {"group_id", t.group_id},
+                            {"type", t.type},
+                            {"amount", t.amount},
+                            {"category", t.category}});
+    }
+
+    return response;
+}
+
+nlohmann::json TransactionHandler::getGroupBalance(int group_id) {
+    double balance = service.getGroupBalance(group_id);
+
+    return {{"status", "success"}, {"group_id", group_id}, {"balance", balance}};
 }
