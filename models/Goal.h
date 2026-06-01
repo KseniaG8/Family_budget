@@ -7,4 +7,5 @@ struct Goal {
     std::string name;
     double target_amount;
     double current_amount;
+    std::string deadline;
 };
