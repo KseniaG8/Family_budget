@@ -1,7 +1,7 @@
 #include "UserService.h"
 #include <botan/bcrypt.h>
 #include <botan/system_rng.h>
-#include <botan/totp.h>
+#include <botan/otp.h>
 #include <botan/base32.h>
 
 UserService::UserService(Database& db) : database(db) {}
@@ -64,11 +64,10 @@ bool UserService::verifyLogin2FA(const std::string& login, const std::string& co
     if (user.id == -1 || user.totp_secret.empty() || user.is_2fa_enabled == 0) return false;
 
     try {
-        std::vector<uint8_t> secret_bytes = Botan::base32_decode(user.totp_secret);
-        Botan::SymmetricKey key(secret_bytes);
-        Botan::TOTP totp(key, "SHA-1", 6, 30);
+        Botan::secure_vector<uint8_t> secret_bytes = Botan::base32_decode(user.totp_secret);
+        Botan::TOTP totp(secret_bytes.data(), secret_bytes.size());
         
-        return totp.verify(std::stoul(code), std::time(nullptr), 1);
+        return totp.verify_totp(std::stoul(code), std::time(nullptr), 1);
     } catch (...) {
         return false;
     }
