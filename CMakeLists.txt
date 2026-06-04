@@ -27,15 +27,18 @@ set(PROJECT_SOURCES
         src/registrationdialog.cpp
         inc/registrationdialog.h
         ui/registrationdialog.ui
-        ui/alltransactionsdialog.ui
-        inc/alltransactionsdialog.h
-        src/alltransactionsdialog.cpp
-        inc/budgetlimitsdialog.h
-        src/budgetlimitsdialog.cpp
+        src/goalsdialog.cpp
+        inc/goalsdialog.h
+        src/setup2FAdialog.cpp
+        inc/setup2FAdialog.h
+        src/Verify2FADialog.cpp
+        inc/Verify2FADialog.h
         ui/budgetlimitsdialog.ui
-
-
-
+        ui/alltransactionsdialog.ui
+        src/budgetlimitsdialog.cpp
+        inc/budgetlimitsdialog.h
+        src/alltransactionsdialog.cpp
+        inc/alltransactionsdialog.h
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -102,11 +105,10 @@ if(BUILD_SERVER)
 find_package(Boost REQUIRED)
 find_package(SQLite3 REQUIRED)
 
-find_path(BOTAN_INCLUDE_DIR botan/bcrypt.h
+find_path(BOTAN_INCLUDE_DIR botan/totp.h
     PATHS
+        /opt/homebrew/include/botan-3
         /opt/homebrew/opt/botan/include/botan-3
-        /usr/include/botan-2
-        /usr/include/botan-3
 )
 
 find_library(BOTAN_LIBRARY

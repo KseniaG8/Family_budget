@@ -1,12 +1,12 @@
 #include "../inc/registrationdialog.h"
 #include "ui_registrationdialog.h"
-#include "Verify2FADialog.h" 
 #include <QPushButton>
 #include <QMessageBox>
 #include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include "setup2FAdialog.h"
+#include "../inc/setup2FAdialog.h"
+#include "../inc/Verify2FADialog.h"
 
 const QString SERVER_URL = "http://localhost:8080";
 
