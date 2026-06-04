@@ -109,6 +109,9 @@ public:
 
     double getGroupBalance(int group_id);
 
+    bool enable2FA(int user_id, const std::string& secret);
+    void updateExchangeRate(const std::string& currencyCode, double rate);
+    
 private:
     sqlite3 *db = nullptr;
     std::mutex db_mutex;
