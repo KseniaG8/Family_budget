@@ -1,45 +1,44 @@
-#pragma once
-#include <QDialog>
+#include "../inc/setup2FAdialog.h"
 #include <QVBoxLayout>
-#include <QLineEdit>
 #include <QPushButton>
-#include <QLabel>
+#include <QNetworkReply>
+#include <QPixmap>
 
-class Verify2FADialog : public QDialog {
-    Q_OBJECT
-public:
-    explicit Verify2FADialog(QWidget *parent = nullptr) : QDialog(parent) {
-        setWindowTitle("Проверка 2FA");
-        setFixedSize(300, 150);
+Setup2FADialog::Setup2FADialog(const QString& otpUri, const QString& secretText, QWidget *parent) 
+    : QDialog(parent), networkManager(new QNetworkAccessManager(this)) {
+    setWindowTitle("Настройка 2FA");
+    setFixedSize(350, 400);
+    auto *layout = new QVBoxLayout(this);
+    layout->addWidget(new QLabel("1. Скачайте Google Authenticator.", this));
+    layout->addWidget(new QLabel("2. Отсканируйте этот QR-код:", this));
 
-        auto *layout = new QVBoxLayout(this);
-        
-        auto *label = new QLabel("Введите 6-значный код\nиз Google Authenticator:", this);
-        label->setAlignment(Qt::AlignCenter);
-        layout->addWidget(label);
+    qrLabel = new QLabel(this);
+    qrLabel->setAlignment(Qt::AlignCenter);
+    qrLabel->setText("Загрузка QR-кода...");
+    layout->addWidget(qrLabel);
 
-        codeEdit = new QLineEdit(this);
-        codeEdit->setPlaceholderText("000000");
-        codeEdit->setMaxLength(6);
-        codeEdit->setAlignment(Qt::AlignCenter);
-        
-        QFont font = codeEdit->font();
-        font.setPointSize(16);
-        font.setLetterSpacing(QFont::AbsoluteSpacing, 5);
-        codeEdit->setFont(font);
-        layout->addWidget(codeEdit);
+    QString qrApiUrl = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + QUrl::toPercentEncoding(otpUri);
+    QNetworkRequest request((QUrl(qrApiUrl)));
+    connect(networkManager, &QNetworkAccessManager::finished, this, &Setup2FADialog::onQrDownloaded);
+    networkManager->get(request);
 
-        auto *verifyBtn = new QPushButton("Подтвердить", this);
-        verifyBtn->setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold; padding: 5px;");
-        layout->addWidget(verifyBtn);
+    auto *secretLabel = new QLabel("Или введите ключ:\n<b>" + secretText + "</b>", this);
+    secretLabel->setAlignment(Qt::AlignCenter);
+    layout->addWidget(secretLabel);
 
-        connect(verifyBtn, &QPushButton::clicked, this, &QDialog::accept);
+    auto *closeBtn = new QPushButton("Готово, я отсканировал", this);
+    layout->addWidget(closeBtn);
+    connect(closeBtn, &QPushButton::clicked, this, &QDialog::accept);
+}
+
+void Setup2FADialog::onQrDownloaded(QNetworkReply *reply) {
+    if (reply->error() == QNetworkReply::NoError) {
+        QByteArray imageData = reply->readAll();
+        QPixmap pixmap;
+        pixmap.loadFromData(imageData);
+        qrLabel->setPixmap(pixmap);
+    } else {
+        qrLabel->setText("Ошибка загрузки QR-кода.");
     }
-
-    QString getCode() const { 
-        return codeEdit->text(); 
-    }
-
-private:
-    QLineEdit *codeEdit;
-};
+    reply->deleteLater();
+}
