@@ -26,8 +26,10 @@ private slots:
     void onSignInClicked();
     void onSignUpClicked();
     void onReplyFinished(QNetworkReply *reply);
+    void onRegisterButtonClicked();
 
 private:
+    void setActiveTab(const QString &tab);
     Ui::RegistrationDialog *ui;
     QNetworkAccessManager *networkManager;
     QString baseUrl = "http://localhost:8080";
