@@ -2,11 +2,16 @@ cmake_minimum_required(VERSION 3.5)
 
 project(BudgetClient VERSION 0.1 LANGUAGES CXX)
 
+option(BUILD_CLIENT "Build Qt client" ON)
+option(BUILD_SERVER "Build server" ON)
+
+if(BUILD_CLIENT)
+
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/ui)
 
@@ -88,4 +93,64 @@ install(TARGETS BudgetClient
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(BudgetClient)
+endif()
+
+endif()
+
+if(BUILD_SERVER)
+
+find_package(Boost REQUIRED)
+find_package(SQLite3 REQUIRED)
+
+find_path(BOTAN_INCLUDE_DIR botan/bcrypt.h
+    PATHS
+        /opt/homebrew/opt/botan/include/botan-3
+        /usr/include/botan-2
+        /usr/include/botan-3
+)
+
+find_library(BOTAN_LIBRARY
+    NAMES botan-3 botan-2
+    PATHS
+        /opt/homebrew/opt/botan/lib
+        /usr/lib
+        /usr/lib/aarch64-linux-gnu
+        /usr/lib/x86_64-linux-gnu
+)
+
+add_executable(BudgetServer
+    main.cpp
+    database/Database.cpp
+    database/UserDatabase.cpp
+    database/TransactionDatabase.cpp
+    database/LimitDatabase.cpp
+    database/GoalDatabase.cpp
+    database/GroupDatabase.cpp
+    services/UserService.cpp
+    services/TransactionService.cpp
+    handlers/UserHandler.cpp
+    handlers/TransactionHandler.cpp
+    server/Server.cpp
+    server/Session.cpp
+)
+
+target_compile_features(BudgetServer PRIVATE cxx_std_20)
+
+set_target_properties(BudgetServer PROPERTIES
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+)
+
+target_include_directories(BudgetServer PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${Boost_INCLUDE_DIRS}
+    ${SQLite3_INCLUDE_DIRS}
+    ${BOTAN_INCLUDE_DIR}
+)
+
+target_link_libraries(BudgetServer PRIVATE
+    SQLite::SQLite3
+    ${BOTAN_LIBRARY}
+)
+
 endif()
