@@ -104,7 +104,10 @@ if(BUILD_SERVER)
 
 find_package(Boost REQUIRED)
 find_package(SQLite3 REQUIRED)
-
+find_package(OpenSSL REQUIRED)
+find_package(fmt REQUIRED)
+find_package(spdlog REQUIRED)
+find_library(PUGIXML_LIBRARY NAMES pugixml PATHS /opt/homebrew/lib /usr/lib)
 find_path(BOTAN_INCLUDE_DIR botan/totp.h
     PATHS
         /opt/homebrew/include/botan-3
@@ -122,16 +125,24 @@ find_library(BOTAN_LIBRARY
 
 add_executable(BudgetServer
     main.cpp
+    
+    # База данных
     database/Database.cpp
     database/UserDatabase.cpp
     database/TransactionDatabase.cpp
     database/LimitDatabase.cpp
     database/GoalDatabase.cpp
     database/GroupDatabase.cpp
-    services/UserService.cpp
+    
+    services/CryptoHelper.cpp
+    services/CurrencyService.cpp
+    services/MLCategorizer.cpp
     services/TransactionService.cpp
-    handlers/UserHandler.cpp
+    services/UserService.cpp
+    
     handlers/TransactionHandler.cpp
+    handlers/UserHandler.cpp
+    
     server/Server.cpp
     server/Session.cpp
 )
@@ -153,6 +164,13 @@ target_include_directories(BudgetServer PRIVATE
 target_link_libraries(BudgetServer PRIVATE
     SQLite::SQLite3
     ${BOTAN_LIBRARY}
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    fmt::fmt
+    spdlog::spdlog
+    ${PUGIXML_LIBRARY}
+    "-framework CoreFoundation"
+    "-framework Security"
 )
 
 endif()
