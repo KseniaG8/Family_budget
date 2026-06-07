@@ -14,7 +14,7 @@ BudgetLimitsDialog::BudgetLimitsDialog(QWidget *parent, int userId, const QStrin
 {
     ui->setupUi(this);
     setWindowTitle("Управление лимитами");
-
+    ui->categoryCombo->addItems({"Еда", "Транспорт", "Развлечения", "Зарплата", "Другое"});
     networkManager = new QNetworkAccessManager(this);
     connect(networkManager, &QNetworkAccessManager::finished, this, &BudgetLimitsDialog::onReplyFinished);
 
@@ -60,7 +60,7 @@ void BudgetLimitsDialog::onSavedClicked()
     request["user_id"] = currentUserId;
     request["category"] = category;
     request["limit"] = limit;
-
+    request["period"] = "monthly";
     sendPostRequest("/limits", request);
 }
 

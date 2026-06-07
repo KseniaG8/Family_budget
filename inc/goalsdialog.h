@@ -33,6 +33,7 @@ private:
     void sendPostRequest(const QString &endpoint, const QJsonObject &data);
     void loadGoals();
     void fillTable(const QJsonArray &goals);
+    void sendPutRequest(const QString &endpoint, const QJsonObject &data);
 };
 
 #endif // GOALSDIALOG_H

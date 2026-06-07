@@ -3,6 +3,10 @@
 #include <QPushButton>
 #include <QMessageBox>
 #include <QDebug>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include "../inc/setup2FAdialog.h"
+#include "../inc/Verify2FADialog.h"
 
 const QString SERVER_URL = "http://localhost:8080";
 
@@ -23,7 +27,6 @@ RegistrationDialog::RegistrationDialog(QWidget *parent)
     connect(ui->buttonBox, &QDialogButtonBox::accepted, this, &RegistrationDialog::onRegisterButtonClicked);
     connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &RegistrationDialog::reject);
 
-    // По умолчанию SIGN IN
     setActiveTab("signin");
 
     ui->signInLabel->setText("<a href=\"#\" style=\"color: black; text-decoration: none; background-color: transparent;\">SIGN IN</a>");
@@ -44,7 +47,7 @@ void RegistrationDialog::onSignUpClicked()
 
 void RegistrationDialog::sendPostRequest(const QString &endpoint, const QJsonObject &data)
 {
-    QUrl url(baseUrl + endpoint);
+    QUrl url(SERVER_URL + endpoint); 
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
@@ -55,26 +58,16 @@ void RegistrationDialog::sendPostRequest(const QString &endpoint, const QJsonObj
 void RegistrationDialog::setActiveTab(const QString &tab)
 {
     if (tab == "signin") {
-        // SIGN IN активен
         ui->signInLabel->setStyleSheet("color: #2c3e50; font: bold 12pt; background-color: transparent;");
         ui->signUpLabel->setStyleSheet("color: #95a5a6; font: bold 12pt; background-color: transparent;");
-
-        // Передвигаем линию под SIGN IN
         ui->underline->move(110, ui->underline->y());
-
-        // Скрываем поле подтверждения пароля
         ui->confirmLabel->hide();
         ui->confirmEdit->hide();
     }
     else if (tab == "signup") {
-        // SIGN UP активен
         ui->signInLabel->setStyleSheet("color: #95a5a6; font: bold 12pt; background-color: transparent;");
         ui->signUpLabel->setStyleSheet("color: #2c3e50; font: bold 12pt; background-color: transparent;");
-
-        // Передвигаем линию под SIGN UP
         ui->underline->move(340, ui->underline->y());
-
-        // Показываем поле подтверждения пароля
         ui->confirmLabel->show();
         ui->confirmEdit->show();
     }
@@ -99,13 +92,13 @@ void RegistrationDialog::onRegisterButtonClicked()
         }
 
         QJsonObject request;
-        request["login"] = username;
+        request["login"] = username; 
         request["password"] = password;
 
         sendPostRequest("/register", request);
     } else {
         QJsonObject request;
-        request["login"] = username;
+        request["login"] = username; 
         request["password"] = password;
 
         sendPostRequest("/login", request);
@@ -127,22 +120,52 @@ void RegistrationDialog::onReplyFinished(QNetworkReply *reply)
     QString url = reply->url().toString();
 
     if (url.contains("/register")) {
-        if (obj.contains("error")) {
-            QMessageBox::warning(this, "Ошибка регистрации", obj["error"].toString());
+        if (obj.contains("error") || obj["status"].toString() == "error") {
+            QString errMsg = obj.contains("message") ? obj["message"].toString() : obj["error"].toString();
+            QMessageBox::warning(this, "Ошибка регистрации", errMsg);
         } else {
             QMessageBox::information(this, "Успех", "Регистрация успешна! Теперь войдите.");
+            setActiveTab("signin"); 
         }
     }
-    else if (url.contains("/login")) {
-        if (obj.contains("error")) {
-            QMessageBox::warning(this, "Ошибка входа", obj["error"].toString());
+    else if (url.contains("/login") && !url.contains("/verify")) {
+        if (obj.contains("error") || obj["status"].toString() == "error") {
+            QString errMsg = obj.contains("message") ? obj["message"].toString() : obj["error"].toString();
+            QMessageBox::warning(this, "Ошибка входа", errMsg);
+        } else {
+            bool is2faEnabled = obj["is_2fa_enabled"].toBool();
+            
+            if (is2faEnabled) {
+                Verify2FADialog dialog(this);
+                if (dialog.exec() == QDialog::Accepted) {
+                    QString code = dialog.getCode();
+                    
+                    QJsonObject request;
+                    request["login"] = ui->lineEdit_2->text();
+                    request["code"] = code;
+                    
+                    sendPostRequest("/2fa/verify", request);
+                }
+            } else {
+                int userId = obj["user_id"].toInt();
+                QString loginName = obj["login"].toString(); 
+                emit loginSuccess(userId, loginName);       
+                accept(); 
+            }
+        }
+    }
+    else if (url.contains("/2fa/verify")) {
+        if (obj.contains("error") || obj["status"].toString() == "error") {
+            QString errMsg = obj.contains("message") ? obj["message"].toString() : "Неверный код!";
+            QMessageBox::warning(this, "Ошибка 2FA", errMsg);
         } else {
             int userId = obj["user_id"].toInt();
-            emit loginSuccess(userId);
-            accept();  // закрываем диалог
+            QString loginName = obj["login"].toString();
+            emit loginSuccess(userId, loginName);
+            accept();
         }
     }
-
+    
     reply->deleteLater();
 }
 
@@ -150,5 +173,3 @@ RegistrationDialog::~RegistrationDialog()
 {
     delete ui;
 }
-
-

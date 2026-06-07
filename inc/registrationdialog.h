@@ -20,7 +20,7 @@ public:
     ~RegistrationDialog();
 
 signals:
-    void loginSuccess(int userId);
+    void loginSuccess(int userId, const QString &login);
 
 private slots:
     void onSignInClicked();
