@@ -1,7 +1,10 @@
 #include "TransactionHandler.h"
 
-TransactionHandler::TransactionHandler(TransactionService &service)
-    : service(service) {
+TransactionHandler::TransactionHandler(
+    TransactionService &service,
+    UserService &userService
+)
+    : service(service), userService(userService) {
 }
 
 nlohmann::json TransactionHandler::getTransactions(int user_id) {
@@ -99,6 +102,18 @@ nlohmann::json TransactionHandler::getTransactionById(int transaction_id) {
           {"type", t.type},
           {"amount", t.amount},
           {"category", t.category}}}};
+}
+
+nlohmann::json TransactionHandler::getCategoryStatistics(int user_id) {
+    auto stats = service.getCategoryStatistics(user_id);
+
+    nlohmann::json response = nlohmann::json::array();
+
+    for (const auto &[category, amount] : stats) {
+        response.push_back({{"category", category}, {"amount", amount}});
+    }
+
+    return response;
 }
 
 nlohmann::json TransactionHandler::setLimit(
@@ -224,9 +239,21 @@ nlohmann::json TransactionHandler::deleteGroup(int group_id, int requester_id) {
     return {{"status", success ? "success" : "error"}};
 }
 
-nlohmann::json TransactionHandler::addUserToGroup(int group_id, const std::string& login) { 
-    if (!service.groupExists(group_id)) return {{"status", "error"}, {"message", "Group not found"}};
-    if (!service.addUserToGroup(group_id, login)) return {{"status", "error"}, {"message", "User not found"}};
+nlohmann::json
+TransactionHandler::addUserToGroup(int group_id, const std::string &login) {
+    User user = userService.getUserByLogin(login);
+
+    if (user.id == -1) {
+        return {{"status", "error"}, {"message", "User not found"}};
+    }
+
+    bool success = service.addUserToGroup(group_id, user.id);
+
+    if (!success) {
+        return {
+            {"status", "error"}, {"message", "Failed to add user to group"}};
+    }
+
     return {{"status", "success"}};
 }
 nlohmann::json TransactionHandler::getCategoryAnalytics(int user_id) {

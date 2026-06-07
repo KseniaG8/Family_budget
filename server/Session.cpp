@@ -139,6 +139,16 @@ void Session::handle_request() {
             return;
         }
 
+        if (request_.method() == http::verb::get &&
+            target.find("/analytics/categories?") == 0) {
+            int user_id = std::stoi(get_query_param(target, "user_id"));
+
+            auto result = transactionHandler_.getCategoryStatistics(user_id);
+
+            send_response(result);
+            return;
+        }
+
         if (request_.method() == http::verb::post && target == "/limits") {
             json body = json::parse(request_.body());
 
@@ -196,7 +206,7 @@ void Session::handle_request() {
             send_response(result);
             return;
         }
-        
+
         if (request_.method() == http::verb::put && target == "/goals") {
             json body = json::parse(request_.body());
 
@@ -244,8 +254,12 @@ void Session::handle_request() {
 
         if (request_.method() == http::verb::post && target == "/groups/members") {
             json body = json::parse(request_.body());
-            std::string login = body["login"].get<std::string>(); 
-            send_response(transactionHandler_.addUserToGroup(body["group_id"], login));
+
+            auto result = transactionHandler_.addUserToGroup(
+                body["group_id"], body["login"]
+            );
+
+            send_response(result);
             return;
         }
         
@@ -335,18 +349,21 @@ void Session::handle_request() {
 
         if (request_.method() == http::verb::post && target == "/2fa/setup") {
             json body = json::parse(request_.body());
-            send_response(userHandler_.setup2FA(body["user_id"], body["login"]));
+            send_response(userHandler_.setup2FA(body["user_id"], body["login"])
+            );
             return;
         }
 
         if (request_.method() == http::verb::post && target == "/2fa/verify") {
             json body = json::parse(request_.body());
-            send_response(userHandler_.verifyLogin2FA(body["login"], body["code"]));
+            send_response(
+                userHandler_.verifyLogin2FA(body["login"], body["code"])
+            );
             return;
         }
 
-        // --- Аналитика ---
-        if (request_.method() == http::verb::get && target.find("/analytics/categories?") == 0) {
+        if (request_.method() == http::verb::get &&
+            target.find("/analytics/categories?") == 0) {
             int user_id = std::stoi(get_query_param(target, "user_id"));
             send_response(transactionHandler_.getCategoryAnalytics(user_id));
             return;
