@@ -24,6 +24,7 @@ Setup2FADialog::Setup2FADialog(const QString& otpUri, const QString& secretText,
 
     auto *secretLabel = new QLabel("Или введите ключ:\n<b>" + secretText + "</b>", this);
     secretLabel->setAlignment(Qt::AlignCenter);
+    secretLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     layout->addWidget(secretLabel);
 
     auto *closeBtn = new QPushButton("Готово, я отсканировал", this);
