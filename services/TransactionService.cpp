@@ -50,6 +50,12 @@ Transaction TransactionService::getTransactionById(int transaction_id) {
     return database.getTransactionById(transaction_id);
 }
 
+std::map<std::string, double> TransactionService::getCategoryStatistics(
+    int user_id
+) {
+    return database.getCategoryStatistics(user_id);
+}
+
 bool TransactionService::setLimit(
     int user_id,
     const std::string &category,
