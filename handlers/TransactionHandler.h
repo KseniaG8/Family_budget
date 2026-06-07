@@ -2,10 +2,11 @@
 #include <nlohmann/json.hpp>
 
 #include "../services/TransactionService.h"
+#include "../services/UserService.h"
 
 class TransactionHandler {
 public:
-    TransactionHandler(TransactionService &service);
+    TransactionHandler(TransactionService &service, UserService &userService);
 
     nlohmann::json getTransactions(int user_id);
     nlohmann::json addTransaction(
@@ -28,6 +29,8 @@ public:
     nlohmann::json deleteTransaction(int transaction_id);
 
     nlohmann::json getTransactionById(int transaction_id);
+
+    nlohmann::json getCategoryStatistics(int user_id);
 
     nlohmann::json setLimit(
         int user_id,
@@ -60,7 +63,9 @@ public:
     nlohmann::json createGroup(const std::string &name, int owner_id);
     nlohmann::json deleteGroup(int group_id, int requester_id);
 
-    nlohmann::json addUserToGroup(int group_id, int user_id);
+    UserService &userService;
+    nlohmann::json addUserToGroup(int group_id, const std::string &login);
+    nlohmann::json getCategoryAnalytics(int user_id);
     nlohmann::json
     removeUserFromGroup(int group_id, int user_id, int requester_id);
     nlohmann::json getGroupMembers(int group_id, int requester_id);
