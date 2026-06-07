@@ -73,7 +73,7 @@ public:
     bool deleteGroup(int group_id);
     bool groupExists(int group_id);
 
-    bool addUserToGroup(int group_id, const std::string& login); 
+    bool addUserToGroup(int group_id, int user_id);
     nlohmann::json getCategoryAnalytics(int user_id);
     bool removeUserFromGroup(int group_id, int user_id);
     bool userExists(int user_id);
