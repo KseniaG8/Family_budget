@@ -34,6 +34,8 @@ public:
 
     Transaction getTransactionById(int transaction_id);
 
+    std::map<std::string, double> getCategoryStatistics(int user_id);
+
     bool setLimit(
         int user_id,
         const std::string &category,
