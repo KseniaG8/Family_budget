@@ -21,7 +21,7 @@ nlohmann::json TransactionHandler::getTransactions(int user_id) {
         );
     }
 
-    return response;
+    return {{"status", "success"}, {"transactions", response}};
 }
 
 nlohmann::json TransactionHandler::getTransactionsByCategory(
@@ -255,6 +255,9 @@ TransactionHandler::addUserToGroup(int group_id, const std::string &login) {
     }
 
     return {{"status", "success"}};
+}
+nlohmann::json TransactionHandler::getCategoryAnalytics(int user_id) {
+    return service.getCategoryAnalytics(user_id);
 }
 
 nlohmann::json TransactionHandler::removeUserFromGroup(

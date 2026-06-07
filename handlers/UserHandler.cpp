@@ -8,9 +8,7 @@ nlohmann::json UserHandler::registerUser(const std::string& login, const std::st
 }
 
 nlohmann::json UserHandler::loginUser(const std::string& login, const std::string& password) {
-    std::string result = service.loginUser(login, password);
-    
-    return { {"status", result} }; 
+    return service.loginUser(login, password);
 }
 
 nlohmann::json UserHandler::setup2FA(int user_id, const std::string& login) {
@@ -18,8 +16,5 @@ nlohmann::json UserHandler::setup2FA(int user_id, const std::string& login) {
 }
 
 nlohmann::json UserHandler::verifyLogin2FA(const std::string& login, const std::string& code) {
-    if (service.verifyLogin2FA(login, code)) {
-        return {{"status", "success"}};
-    }
-    return {{"status", "invalid_code"}, {"message", "Неверный код 2FA"}};
+    return service.verifyLogin2FA(login, code);
 }

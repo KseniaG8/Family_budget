@@ -252,8 +252,7 @@ void Session::handle_request() {
             return;
         }
 
-        if (request_.method() == http::verb::post &&
-            target == "/groups/members") {
+        if (request_.method() == http::verb::post && target == "/groups/members") {
             json body = json::parse(request_.body());
 
             auto result = transactionHandler_.addUserToGroup(
@@ -263,7 +262,7 @@ void Session::handle_request() {
             send_response(result);
             return;
         }
-
+        
         if (request_.method() == http::verb::delete_ &&
             target.find("/groups/members?") == 0) {
             int group_id = std::stoi(get_query_param(target, "group_id"));

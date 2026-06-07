@@ -3,6 +3,8 @@
 #include <botan/bcrypt.h>
 #include <botan/otp.h>
 #include <botan/system_rng.h>
+#include <botan/otp.h>
+#include <botan/base32.h>
 
 UserService::UserService(Database &db) : database(db) {
 }

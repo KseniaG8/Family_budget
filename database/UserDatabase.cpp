@@ -31,9 +31,9 @@ bool Database::addUser(const std::string &login, const std::string &password) {
 User Database::getUserByLogin(const std::string &login) {
     std::lock_guard<std::mutex> lock(db_mutex);
 
-    User user{-1, "", ""};
+    User user{-1, "", "", "", 0, -1};
 
-    std::string sql = "SELECT id, login, password FROM users WHERE login = ?;";
+    std::string sql = "SELECT id, login, password, totp_secret, is_2fa_enabled FROM users WHERE login = ?;";
     sqlite3_stmt *stmt = nullptr;
 
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
@@ -47,20 +47,17 @@ User Database::getUserByLogin(const std::string &login) {
         user.id = sqlite3_column_int(stmt, 0);
         const unsigned char *loginText = sqlite3_column_text(stmt, 1);
         const unsigned char *passText = sqlite3_column_text(stmt, 2);
+        const unsigned char *totpText = sqlite3_column_text(stmt, 3);
 
-        if (loginText) {
-            user.login = reinterpret_cast<const char *>(loginText);
-        }
-
-        if (passText) {
-            user.password = reinterpret_cast<const char *>(passText);
-        }
+        if (loginText) user.login = reinterpret_cast<const char *>(loginText);
+        if (passText) user.password = reinterpret_cast<const char *>(passText);
+        if (totpText) user.totp_secret = reinterpret_cast<const char *>(totpText);
+        
+        user.is_2fa_enabled = sqlite3_column_int(stmt, 4);
     }
-
-    sqlite3_finalize(stmt);
+    sqlite3_finalize(stmt); 
     return user;
 }
-
 bool Database::userExists(int user_id) {
     std::lock_guard<std::mutex> lock(db_mutex);
 

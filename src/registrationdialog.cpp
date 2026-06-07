@@ -1,12 +1,12 @@
 #include "../inc/registrationdialog.h"
 #include "ui_registrationdialog.h"
-#include "Verify2FADialog.h" 
 #include <QPushButton>
 #include <QMessageBox>
 #include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include "setup2FAdialog.h"
+#include "../inc/setup2FAdialog.h"
+#include "../inc/Verify2FADialog.h"
 
 const QString SERVER_URL = "http://localhost:8080";
 
@@ -148,8 +148,9 @@ void RegistrationDialog::onReplyFinished(QNetworkReply *reply)
                 }
             } else {
                 int userId = obj["user_id"].toInt();
-                emit loginSuccess(userId);
-                accept();  
+                QString loginName = obj["login"].toString(); 
+                emit loginSuccess(userId, loginName);       
+                accept(); 
             }
         }
     }
@@ -159,7 +160,8 @@ void RegistrationDialog::onReplyFinished(QNetworkReply *reply)
             QMessageBox::warning(this, "Ошибка 2FA", errMsg);
         } else {
             int userId = obj["user_id"].toInt();
-            emit loginSuccess(userId);
+            QString loginName = obj["login"].toString();
+            emit loginSuccess(userId, loginName);
             accept();
         }
     }

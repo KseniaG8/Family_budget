@@ -4,7 +4,8 @@
 #include "../inc/registrationdialog.h"
 #include "../inc/budgetlimitsdialog.h"
 #include "../inc/goalsdialog.h"
-
+#include "../inc/setup2FAdialog.h"
+#include "../inc/Verify2FADialog.h"
 #include <QMessageBox>
 #include <QDebug>
 #include <QFormLayout>
@@ -12,7 +13,6 @@
 #include <QDoubleSpinBox>
 #include <QUrlQuery>
 #include <QDialogButtonBox>
-#include "setup2FAdialog.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -25,7 +25,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(setup2faBtn, &QPushButton::clicked, this, [this]() {
         QJsonObject request;
         request["user_id"] = currentUserId; 
-        request["login"] = "User_" + QString::number(currentUserId); 
+        request["login"] = currentLogin; 
         sendPostRequest("/2fa/setup", request);
     });
 
@@ -172,7 +172,6 @@ void MainWindow::onAddButtonClicked()
 
         sendPostRequest("/transactions", request);
 
-        refreshData();
 
         if (type == "expense") {
             QString category = categoryBox->currentText();
@@ -252,11 +251,17 @@ void MainWindow::onReplyFinished(QNetworkReply *reply)
             QString uri = obj["uri"].toString();
 
             Setup2FADialog setupDialog(uri, secret, this);
-            setupDialog.exec();
+            if (setupDialog.exec() == QDialog::Accepted) {
+                QMessageBox::information(this, "Успех", "Двухфакторная аутентификация успешно включена!");
+            }
         
             QMessageBox::information(this, "Успех", "Двухфакторная аутентификация успешно включена!");
         }
     }   
+
+    if (url.contains("/transactions") && reply->operation() == QNetworkAccessManager::PostOperation) {
+        refreshData(); 
+    }
 
     reply->deleteLater();
 }
@@ -280,6 +285,13 @@ void MainWindow::onGoalsButtonClicked()
     GoalsDialog *dialog = new GoalsDialog(this, currentUserId, baseUrl);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->exec();
+}
+
+void MainWindow::setCurrentUser(int id, const QString &login) { 
+    currentUserId = id; 
+    currentLogin = login;
+    
+    refreshData(); 
 }
 
 MainWindow::~MainWindow()
