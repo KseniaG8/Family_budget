@@ -6,5 +6,5 @@ struct User {
     std::string login;
     std::string password;
     std::string totp_secret; 
-    int is_2fa_enabled;              
+    int is_2fa_enabled;               
 };
