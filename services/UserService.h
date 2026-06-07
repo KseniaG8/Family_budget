@@ -8,10 +8,9 @@ public:
     UserService(Database& db);
 
     std::string registerUser(const std::string& login, const std::string& password);
-    std::string loginUser(const std::string& login, const std::string& password);
-    
+    nlohmann::json loginUser(const std::string& login, const std::string& password);
     nlohmann::json setup2FA(int user_id, const std::string& login);
-    bool verifyLogin2FA(const std::string& login, const std::string& code);
+    nlohmann::json verifyLogin2FA(const std::string& login, const std::string& code);
 
 private:
     Database& database;

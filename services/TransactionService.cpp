@@ -126,8 +126,23 @@ bool TransactionService::groupExists(int group_id) {
     return database.groupExists(group_id);
 }
 
-bool TransactionService::addUserToGroup(int group_id, int user_id) {
-    return database.addUserToGroup(group_id, user_id, "member");
+bool TransactionService::addUserToGroup(int group_id, const std::string& login) {
+    User user = database.getUserByLogin(login);
+    if (user.id == -1) return false; 
+    return database.addUserToGroup(group_id, user.id, "member");
+}
+
+nlohmann::json TransactionService::getCategoryAnalytics(int user_id) {
+    auto transactions = database.getTransactionsByUser(user_id);
+    std::map<std::string, double> category_sums;
+    for (const auto& t : transactions) {
+        if (t.type == "expense" || t.type == "Expense") category_sums[t.category] += t.amount;
+    }
+    nlohmann::json result = nlohmann::json::array();
+    for (const auto& [cat, amount] : category_sums) {
+        result.push_back({{"category", cat}, {"amount", amount}});
+    }
+    return result;
 }
 
 bool TransactionService::removeUserFromGroup(int group_id, int user_id) {

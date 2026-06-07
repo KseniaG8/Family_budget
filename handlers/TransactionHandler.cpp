@@ -18,7 +18,7 @@ nlohmann::json TransactionHandler::getTransactions(int user_id) {
         );
     }
 
-    return response;
+    return {{"status", "success"}, {"transactions", response}};
 }
 
 nlohmann::json TransactionHandler::getTransactionsByCategory(
@@ -224,23 +224,13 @@ nlohmann::json TransactionHandler::deleteGroup(int group_id, int requester_id) {
     return {{"status", success ? "success" : "error"}};
 }
 
-nlohmann::json TransactionHandler::addUserToGroup(int group_id, int user_id) {
-    if (!service.userExists(user_id)) {
-        return {{"status", "error"}, {"message", "User not found"}};
-    }
-
-    if (!service.groupExists(group_id)) {
-        return {{"status", "error"}, {"message", "Group not found"}};
-    }
-
-    bool success = service.addUserToGroup(group_id, user_id);
-
-    if (!success) {
-        return {
-            {"status", "error"}, {"message", "Failed to add user to group"}};
-    }
-
+nlohmann::json TransactionHandler::addUserToGroup(int group_id, const std::string& login) { 
+    if (!service.groupExists(group_id)) return {{"status", "error"}, {"message", "Group not found"}};
+    if (!service.addUserToGroup(group_id, login)) return {{"status", "error"}, {"message", "User not found"}};
     return {{"status", "success"}};
+}
+nlohmann::json TransactionHandler::getCategoryAnalytics(int user_id) {
+    return service.getCategoryAnalytics(user_id);
 }
 
 nlohmann::json TransactionHandler::removeUserFromGroup(

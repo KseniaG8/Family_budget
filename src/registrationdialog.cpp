@@ -148,8 +148,9 @@ void RegistrationDialog::onReplyFinished(QNetworkReply *reply)
                 }
             } else {
                 int userId = obj["user_id"].toInt();
-                emit loginSuccess(userId);
-                accept();  
+                QString loginName = obj["login"].toString(); 
+                emit loginSuccess(userId, loginName);       
+                accept(); 
             }
         }
     }
@@ -159,7 +160,8 @@ void RegistrationDialog::onReplyFinished(QNetworkReply *reply)
             QMessageBox::warning(this, "Ошибка 2FA", errMsg);
         } else {
             int userId = obj["user_id"].toInt();
-            emit loginSuccess(userId);
+            QString loginName = obj["login"].toString();
+            emit loginSuccess(userId, loginName);
             accept();
         }
     }
