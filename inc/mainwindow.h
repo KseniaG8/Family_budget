@@ -22,6 +22,8 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+    void setCurrentUser(int id, const QString &login);
+
 private slots:
     void onAddButtonClicked();
     void onReplyFinished(QNetworkReply *reply);
@@ -34,6 +36,7 @@ private slots:
 private:
     QNetworkAccessManager *networkManager;
     int currentUserId = -1;
+    QString currentLogin; 
     QString baseUrl = "http://localhost:8080";
     QString pendingBudgetCategory;
 
