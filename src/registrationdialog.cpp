@@ -138,6 +138,7 @@ void RegistrationDialog::onReplyFinished(QNetworkReply *reply)
             QMessageBox::warning(this, "Ошибка входа", obj["error"].toString());
         } else {
             int userId = obj["user_id"].toInt();
+            QString login = obj["login"].toString();
             emit loginSuccess(userId);
             accept();  // закрываем диалог
         }
