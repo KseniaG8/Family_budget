@@ -48,6 +48,9 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         inc/goalsdialog.h
         src/goalsdialog.cpp
         ui/goalsdialog.ui
+        inc/groupsdialog.h
+        src/groupsdialog.cpp
+        ui/groupsdialog.ui
 
     )
 # Define target properties for Android with Qt 6 as:

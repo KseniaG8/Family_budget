@@ -325,6 +325,43 @@ QPushButton:hover {
       <string>Цели</string>
      </property>
     </widget>
+    <widget class="QPushButton" name="groupsButton">
+     <property name="geometry">
+      <rect>
+       <x>320</x>
+       <y>170</y>
+       <width>161</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QPushButton {
+	border-radius: 20px;
+    padding: 2px 5px;
+    font-size: 10pt;
+	icon: none
+}
+QPushButton {
+    background-color: transparent;
+    border: 2px solid #BAFF82;
+    color: black;
+}
+QPushButton:hover {
+    background-color: #48A000;
+	color: white;
+	border: none;
+}</string>
+     </property>
+     <property name="text">
+      <string>Посмотреть группы</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
