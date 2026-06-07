@@ -40,6 +40,7 @@ private:
     QString currentLogin; 
     QString baseUrl = "http://localhost:8080";
     QString pendingBudgetCategory;
+    QString currentUserLogin;
 
     void sendGetRequest(const QString &endpoint);
     void sendPostRequest(const QString &endpoint, const QJsonObject &data);

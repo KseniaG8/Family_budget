@@ -39,8 +39,10 @@ MainWindow::MainWindow(QWidget *parent)
     connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::onReplyFinished);
 
     RegistrationDialog *dialog = new RegistrationDialog(this);
-    connect(dialog, &RegistrationDialog::loginSuccess, this, [this](int userId) {
+    connect(dialog, &RegistrationDialog::loginSuccess, this, [this](int userId, QString login) {
         currentUserId = userId;
+        currentUserLogin = login;
+        ui->welcomeLabel->setText(QString("Добро пожаловать, %1!").arg(login));
         refreshData();
     });
     dialog->exec();
