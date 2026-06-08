@@ -10,9 +10,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/ui)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets Charts)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets Network Charts)
 
 set(PROJECT_SOURCES
         src/client_main.cpp
@@ -43,6 +43,9 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         inc/groupsdialog.h
         src/groupsdialog.cpp
         ui/groupsdialog.ui
+        inc/statisticsdialog.h
+        src/statisticsdialog.cpp
+        ui/statisticsdialog.ui
 
     )
 # Define target properties for Android with Qt 6 as:
@@ -66,7 +69,7 @@ else()
     endif()
 endif()
 
-target_link_libraries(BudgetClient PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Network)
+target_link_libraries(BudgetClient PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Charts)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an

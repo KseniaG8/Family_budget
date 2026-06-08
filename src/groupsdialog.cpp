@@ -1,4 +1,4 @@
-#include "groupsdialog.h"
+#include "../inc/groupsdialog.h"
 #include "ui_groupsdialog.h"
 #include <QMessageBox>
 #include <QJsonDocument>
@@ -123,7 +123,11 @@ void GroupsDialog::onCreateGroupClicked()
 {
     QString groupName = ui->groupNameEdit->text();
     if (groupName.isEmpty()) {
-        QMessageBox::warning(this, "Ошибка", "Введите название группы");
+        QMessageBox msgBox;
+        msgBox.setWindowTitle("Ошибка");
+        msgBox.setText("Введите название группы");
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.exec();
         return;
     }
 
@@ -137,13 +141,21 @@ void GroupsDialog::onCreateGroupClicked()
 void GroupsDialog::onAddMemberClicked()
 {
     if (currentGroupId == -1) {
-        QMessageBox::warning(this, "Ошибка", "Сначала выберите группу");
+        QMessageBox msgBox;
+        msgBox.setWindowTitle("Ошибка");
+        msgBox.setText("Сначала выберите группу");
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.exec();
         return;
     }
 
     QString userLogin = ui->userLoginEdit->text();
     if (userLogin.isEmpty()) {
-        QMessageBox::warning(this, "Ошибка", "Введите логин пользователя");
+        QMessageBox msgBox;
+        msgBox.setWindowTitle("Ошибка");
+        msgBox.setText("Введите логин пользователя");
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.exec();
         return;
     }
 
@@ -157,7 +169,11 @@ void GroupsDialog::onAddMemberClicked()
 void GroupsDialog::onAddTransactionClicked()
 {
     if (currentGroupId == -1) {
-        QMessageBox::warning(this, "Ошибка", "Сначала выберите группу");
+        QMessageBox msgBox;
+        msgBox.setWindowTitle("Ошибка");
+        msgBox.setText("Сначала выберите группу");
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.exec();
         return;
     }
 
@@ -166,7 +182,11 @@ void GroupsDialog::onAddTransactionClicked()
     double amount = ui->amountSpin->value();
 
     if (amount <= 0) {
-        QMessageBox::warning(this, "Ошибка", "Введите сумму");
+        QMessageBox msgBox;
+        msgBox.setWindowTitle("Ошибка");
+        msgBox.setText("Введите сумму");
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.exec();
         return;
     }
 
@@ -183,7 +203,11 @@ void GroupsDialog::onAddTransactionClicked()
 void GroupsDialog::onReplyFinished(QNetworkReply *reply)
 {
     if (reply->error() != QNetworkReply::NoError) {
-        QMessageBox::warning(this, "Ошибка", "Ошибка сети: " + reply->errorString());
+        QMessageBox msgBox;
+        msgBox.setWindowTitle("Ошибка");
+        msgBox.setText("Ошибка сети: " + reply->errorString());
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.exec();
         reply->deleteLater();
         return;
     }
@@ -194,7 +218,11 @@ void GroupsDialog::onReplyFinished(QNetworkReply *reply)
 
     if (url.contains("/groups") && !url.contains("/members") && !url.contains("/transactions") && !url.contains("/balance")) {
         if (reply->operation() == QNetworkAccessManager::PostOperation) {
-            QMessageBox::information(this, "Успех", "Группа создана!");
+            QMessageBox msgBox;
+            msgBox.setWindowTitle("Успех");
+            msgBox.setText("Группа создана!");
+            msgBox.setIcon(QMessageBox::Information);
+            msgBox.exec();
             ui->groupNameEdit->clear();
             loadGroups();
         } else {
@@ -203,12 +231,20 @@ void GroupsDialog::onReplyFinished(QNetworkReply *reply)
         }
     }
     else if (url.contains("/groups/members")) {
-        QMessageBox::information(this, "Успех", "Участник добавлен!");
+        QMessageBox msgBox;
+        msgBox.setWindowTitle("Успех");
+        msgBox.setText("Участник добавлен!");
+        msgBox.setIcon(QMessageBox::Information);
+        msgBox.exec();
         ui->userLoginEdit->clear();
     }
     else if (url.contains("/groups/transactions") && !url.contains("/balance")) {
         if (reply->operation() == QNetworkAccessManager::PostOperation) {
-            QMessageBox::information(this, "Успех", "Транзакция добавлена!");
+            QMessageBox msgBox;
+            msgBox.setWindowTitle("Успех");
+            msgBox.setText("Транзакция добавлена!");
+            msgBox.setIcon(QMessageBox::Information);
+            msgBox.exec();
             ui->amountSpin->setValue(0);
             if (currentGroupId != -1) {
                 loadGroupTransactions(currentGroupId);

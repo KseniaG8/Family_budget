@@ -139,7 +139,7 @@ void RegistrationDialog::onReplyFinished(QNetworkReply *reply)
         } else {
             int userId = obj["user_id"].toInt();
             QString login = obj["login"].toString();
-            emit loginSuccess(userId);
+            emit loginSuccess(userId, login);
             accept();  // закрываем диалог
         }
     }

@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QNetworkAccessManager>
 #include <QJsonArray>
+#include <QLineEdit>
 
 namespace Ui {
 class GroupsDialog;
