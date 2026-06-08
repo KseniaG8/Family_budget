@@ -65,7 +65,6 @@ public:
 
     UserService &userService;
     nlohmann::json addUserToGroup(int group_id, const std::string &login);
-    nlohmann::json getCategoryAnalytics(int user_id);
     nlohmann::json
     removeUserFromGroup(int group_id, int user_id, int requester_id);
     nlohmann::json getGroupMembers(int group_id, int requester_id);
