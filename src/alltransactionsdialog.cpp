@@ -15,9 +15,8 @@ AllTransactionsDialog::AllTransactionsDialog(QWidget *parent, int userId, const 
     ui->setupUi(this);
 
     setWindowTitle("Все операции");
-    setModal(false);  // не блокирует главное окно
+    setModal(false); 
 
-    // Настраиваем таблицу
     ui->tableWidget->setColumnCount(3);
     ui->tableWidget->setHorizontalHeaderLabels(QStringList() << "Дата" << "Категория" << "Сумма");
     ui->tableWidget->verticalHeader()->setVisible(false);
@@ -25,11 +24,9 @@ AllTransactionsDialog::AllTransactionsDialog(QWidget *parent, int userId, const 
     networkManager = new QNetworkAccessManager(this);
     connect(networkManager, &QNetworkAccessManager::finished, this, &AllTransactionsDialog::onReplyFinished);
 
-    // Подключаем кнопки
     connect(ui->refreshButton, &QPushButton::clicked, this, &AllTransactionsDialog::onRefreshClicked);
     connect(ui->backButton, &QPushButton::clicked, this, &AllTransactionsDialog::onBackClicked);
 
-    // Загружаем данные
     loadTransactions();
 }
 
