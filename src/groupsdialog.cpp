@@ -141,15 +141,15 @@ void GroupsDialog::onAddMemberClicked()
         return;
     }
 
-    int userId = ui->userIdEdit->value();
-    if (userId <= 0) {
-        QMessageBox::warning(this, "Ошибка", "Введите ID пользователя");
+    QString userLogin = ui->userLoginEdit->text();
+    if (userLogin.isEmpty()) {
+        QMessageBox::warning(this, "Ошибка", "Введите логин пользователя");
         return;
     }
 
     QJsonObject request;
     request["group_id"] = currentGroupId;
-    request["user_id"] = userId;
+    request["login"] = userLogin;
 
     sendPostRequest("/groups/members", request);
 }
@@ -204,7 +204,7 @@ void GroupsDialog::onReplyFinished(QNetworkReply *reply)
     }
     else if (url.contains("/groups/members")) {
         QMessageBox::information(this, "Успех", "Участник добавлен!");
-        ui->userIdEdit->clear();
+        ui->userLoginEdit->clear();
     }
     else if (url.contains("/groups/transactions") && !url.contains("/balance")) {
         if (reply->operation() == QNetworkAccessManager::PostOperation) {
