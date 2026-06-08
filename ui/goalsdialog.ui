@@ -163,6 +163,9 @@
       <height>23</height>
      </rect>
     </property>
+    <property name="maximum">
+     <double>1000000000.000000000000000</double>
+    </property>
    </widget>
    <widget class="QPushButton" name="contributeButton">
     <property name="geometry">

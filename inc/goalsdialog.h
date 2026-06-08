@@ -31,6 +31,7 @@ private:
 
     void sendGetRequest(const QString &endpoint);
     void sendPostRequest(const QString &endpoint, const QJsonObject &data);
+    void sendPutRequest(const QString &endpoint, const QJsonObject &data);
     void loadGoals();
     void fillTable(const QJsonArray &goals);
     void sendPutRequest(const QString &endpoint, const QJsonObject &data);

@@ -5,6 +5,8 @@
 #include "../inc/budgetlimitsdialog.h"
 #include "../inc/goalsdialog.h"
 #include "../inc/groupsdialog.h"
+#include "../inc/statisticsdialog.h"
+
 #include "../inc/setup2FAdialog.h"
 #include "../inc/Verify2FADialog.h"
 #include <QMessageBox>
@@ -52,6 +54,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->limitsButton, &QPushButton::clicked, this, &MainWindow::onLimitsClicked);
     connect(ui->goalsButton, &QPushButton::clicked, this, &MainWindow::onGoalsButtonClicked);
     connect(ui->groupsButton, &QPushButton::clicked, this, &MainWindow::onGroupsClicked);
+    connect(ui->statisticsButton, &QPushButton::clicked, this, &MainWindow::onStatisticsClicked);
 }
 
 void MainWindow::sendGetRequest(const QString &endpoint)
@@ -302,6 +305,13 @@ void MainWindow::setCurrentUser(int id, const QString &login) {
     currentLogin = login;
     
     refreshData(); 
+}
+
+void MainWindow::onStatisticsClicked()
+{
+    StatisticsDialog *dialog = new StatisticsDialog(this, currentUserId, baseUrl);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->exec();
 }
 
 MainWindow::~MainWindow()

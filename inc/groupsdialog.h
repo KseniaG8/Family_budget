@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QNetworkAccessManager>
 #include <QJsonArray>
+#include <QLineEdit>
 
 namespace Ui {
 class GroupsDialog;
@@ -30,6 +31,7 @@ private:
     int currentUserId;
     int currentGroupId = -1;
     QString baseUrl;
+    QLineEdit *userLoginEdit;
 
     void sendGetRequest(const QString &endpoint);
     void sendPostRequest(const QString &endpoint, const QJsonObject &data);
