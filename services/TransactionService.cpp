@@ -14,16 +14,12 @@ std::vector<Transaction> TransactionService::getTransactionsByCategory(
     return database.getTransactionsByCategory(user_id, category);
 }
 
-<<<<<<< HEAD
-void TransactionService::addTransaction(int user_id, std::string type, double amount, std::string category) {
-=======
 void TransactionService::addTransaction(
     int user_id,
     std::string type,
     double amount,
     std::string category
 ) {
->>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
     Transaction t;
     t.user_id = user_id;
     t.type = type;
@@ -128,14 +124,6 @@ int TransactionService::createGroup(const std::string &name, int owner_id) {
     return group_id;
 }
 
-<<<<<<< HEAD
-    return {{"status", "success"},
-            {"category", category},
-            {"limit", limit},
-            {"spent", spent},
-            {"remaining", limit - spent},
-            {"exceeded", spent > limit}};
-=======
 bool TransactionService::deleteGroup(int group_id) {
     return database.deleteGroup(group_id);
 }
@@ -191,5 +179,4 @@ std::vector<Transaction> TransactionService::getGroupTransactions(int group_id
 
 double TransactionService::getGroupBalance(int group_id) {
     return database.getGroupBalance(group_id);
->>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 }
