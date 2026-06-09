@@ -58,6 +58,9 @@ nlohmann::json TransactionHandler::getTransactionsByCategory(
     return response;
 }
 
+<<<<<<< HEAD
+nlohmann::json TransactionHandler::addTransaction(int user_id, std::string type, double amount, std::string category) {
+=======
 nlohmann::json TransactionHandler::addTransaction(
     int user_id,
     std::string type,
@@ -76,6 +79,7 @@ nlohmann::json TransactionHandler::addTransaction(
         return {{"status", "error"}, {"message", "Category cannot be empty"}};
     }
 
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
     service.addTransaction(user_id, type, amount, category);
 
     return {{"status", "success"}};
@@ -181,6 +185,10 @@ nlohmann::json TransactionHandler::setLimit(
     return {{"status", "error"}};
 }
 
+<<<<<<< HEAD
+nlohmann::json TransactionHandler::checkLimit(int user_id, const std::string &category) {
+    return service.checkLimit(user_id, category);
+=======
 nlohmann::json TransactionHandler::checkLimit(
     int user_id,
     const std::string &category,
@@ -459,4 +467,5 @@ TransactionHandler::getGroupBalance(int group_id, int requester_id) {
 
     return {
         {"status", "success"}, {"group_id", group_id}, {"balance", balance}};
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 }

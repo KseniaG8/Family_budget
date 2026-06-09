@@ -40,8 +40,12 @@ void Session::handle_request() {
         if (request_.method() == http::verb::post && target == "/register") {
             json body = json::parse(request_.body());
 
+<<<<<<< HEAD
+            auto result = userHandler_.registerUser(body["login"], body["password"]);
+=======
             auto result =
                 userHandler_.registerUser(body["login"], body["password"]);
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 
             send_response(result);
             return;
@@ -50,13 +54,25 @@ void Session::handle_request() {
         if (request_.method() == http::verb::post && target == "/login") {
             json body = json::parse(request_.body());
 
+<<<<<<< HEAD
+            auto result = userHandler_.loginUser(body["login"], body["password"]);
+=======
             auto result =
                 userHandler_.loginUser(body["login"], body["password"]);
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 
             send_response(result);
             return;
         }
 
+<<<<<<< HEAD
+        if (request_.method() == http::verb::post && target == "/transactions") {
+            json body = json::parse(request_.body());
+
+            std::string category = body.contains("category") ? body["category"].get<std::string>() : "";
+
+            auto result = transactionHandler_.addTransaction(body["user_id"], body["type"], body["amount"], category);
+=======
         if (request_.method() == http::verb::post &&
             target == "/transactions") {
             json body = json::parse(request_.body());
@@ -68,6 +84,7 @@ void Session::handle_request() {
             auto result = transactionHandler_.addTransaction(
                 body["user_id"], body["type"], body["amount"], category
             );
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 
             send_response(result);
             return;
@@ -98,9 +115,13 @@ void Session::handle_request() {
             int user_id = std::stoi(get_query_param(target, "user_id"));
             std::string category = get_query_param(target, "category");
 
+<<<<<<< HEAD
+            auto result = transactionHandler_.getTransactionsByCategory(user_id, category);
+=======
             auto result = transactionHandler_.getTransactionsByCategory(
                 user_id, category
             );
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 
             send_response(result);
             return;
@@ -110,9 +131,13 @@ void Session::handle_request() {
             json body = json::parse(request_.body());
 
             auto result = transactionHandler_.updateTransaction(
+<<<<<<< HEAD
+                body["transaction_id"], body["type"], body["amount"], body["category"]);
+=======
                 body["transaction_id"], body["type"], body["amount"],
                 body["category"]
             );
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 
             send_response(result);
             return;
@@ -132,6 +157,9 @@ void Session::handle_request() {
             target.find("/transaction?") == 0) {
             int transaction_id = std::stoi(get_query_param(target, "id"));
 
+<<<<<<< HEAD
+            auto result = transactionHandler_.getTransactionById(transaction_id);
+=======
             auto result =
                 transactionHandler_.getTransactionById(transaction_id);
 
@@ -144,6 +172,7 @@ void Session::handle_request() {
             int user_id = std::stoi(get_query_param(target, "user_id"));
 
             auto result = transactionHandler_.getCategoryStatistics(user_id);
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 
             send_response(result);
             return;
@@ -152,9 +181,13 @@ void Session::handle_request() {
         if (request_.method() == http::verb::post && target == "/limits") {
             json body = json::parse(request_.body());
 
+<<<<<<< HEAD
+            auto result = transactionHandler_.setLimit(body["user_id"], body["category"], body["limit"]);
+=======
             auto result = transactionHandler_.setLimit(
                 body["user_id"], body["category"], body["limit"], body["period"]
             );
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 
             send_response(result);
             return;
@@ -164,10 +197,15 @@ void Session::handle_request() {
             target.find("/limits/check?") == 0) {
             int user_id = std::stoi(get_query_param(target, "user_id"));
             std::string category = get_query_param(target, "category");
+<<<<<<< HEAD
+
+            auto result = transactionHandler_.checkLimit(user_id, category);
+=======
             std::string period = get_query_param(target, "period");
 
             auto result =
                 transactionHandler_.checkLimit(user_id, category, period);
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 
             send_response(result);
             return;

@@ -9,6 +9,11 @@
 #include "../models/GroupMember.h"
 #include "../models/Transaction.h"
 #include "../models/User.h"
+<<<<<<< HEAD
+#include <sqlite3.h>
+#include <vector>
+=======
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 
 class Database {
 public:
@@ -25,6 +30,24 @@ public:
     bool addUser(const std::string &login, const std::string &password);
     User getUserByLogin(const std::string &login);
 
+<<<<<<< HEAD
+    bool updateTransaction(int transaction_id, const std::string &type, double amount, const std::string &category);
+
+    double getBalanceByUser(int user_id);
+
+    std::vector<Transaction> getTransactionsByCategory(int user_id, const std::string &category);
+
+    bool deleteTransaction(int transaction_id);
+
+    Transaction getTransactionById(int transaction_id);
+
+    bool setLimit(int user_id, const std::string &category, double limit_amount);
+    double getLimit(int user_id, const std::string &category);
+    double getSpentByCategory(int user_id, const std::string &category);
+
+private:
+    sqlite3 *db = nullptr;
+=======
     bool updateTransaction(
         int transaction_id,
         const std::string &type,
@@ -118,4 +141,5 @@ public:
 private:
     sqlite3 *db = nullptr;
     std::mutex db_mutex;
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 };

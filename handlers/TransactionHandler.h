@@ -9,6 +9,15 @@ public:
     TransactionHandler(TransactionService &service, UserService &userService);
 
     nlohmann::json getTransactions(int user_id);
+<<<<<<< HEAD
+    nlohmann::json addTransaction(int user_id, std::string type, double amount, std::string category);
+    nlohmann::json getBalance(int user_id);
+    nlohmann::json getTransactionsByCategory(int user_id, const std::string &category);
+
+    nlohmann::json
+    updateTransaction(int transaction_id, const std::string &type, double amount, const std::string &category);
+
+=======
     nlohmann::json addTransaction(
         int user_id,
         std::string type,
@@ -26,10 +35,15 @@ public:
         const std::string &category
     );
 
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
     nlohmann::json deleteTransaction(int transaction_id);
 
     nlohmann::json getTransactionById(int transaction_id);
 
+<<<<<<< HEAD
+    nlohmann::json setLimit(int user_id, const std::string &category, double limit_amount);
+    nlohmann::json checkLimit(int user_id, const std::string &category);
+=======
     nlohmann::json getCategoryStatistics(int user_id);
 
     nlohmann::json setLimit(
@@ -79,6 +93,7 @@ public:
     );
     nlohmann::json getGroupTransactions(int group_id, int requester_id);
     nlohmann::json getGroupBalance(int group_id, int requester_id);
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 
 private:
     TransactionService &service;

@@ -3,8 +3,11 @@
 #include <botan/bcrypt.h>
 #include <botan/otp.h>
 #include <botan/system_rng.h>
+<<<<<<< HEAD
+=======
 #include <botan/otp.h>
 #include <botan/base32.h>
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 
 UserService::UserService(Database &db) : database(db) {
 }
@@ -47,6 +50,15 @@ std::string UserService::registerUser(
     return "success";
 }
 
+<<<<<<< HEAD
+bool UserService::loginUser(const std::string& login, const std::string& password) {
+    User user = database.getUserByLogin(login);
+    if (user.id == -1) return false;
+
+    bool isPasswordValid = Botan::check_bcrypt(password, user.password);
+    
+    return isPasswordValid;
+=======
 nlohmann::json
 UserService::loginUser(const std::string &login, const std::string &password) {
     User user = database.getUserByLogin(login);
@@ -112,4 +124,5 @@ UserService::verifyLogin2FA(const std::string &login, const std::string &code) {
     } catch (...) {
     }
     return {{"status", "error"}, {"message", "Неверный код"}};
+>>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 }
