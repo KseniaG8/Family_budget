@@ -299,6 +299,7 @@ void MainWindow::onGroupsClicked()
     GroupsDialog *dialog = new GroupsDialog(this, currentUserId, baseUrl);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->exec();
+}
 
 void MainWindow::setCurrentUser(int id, const QString &login) { 
     currentUserId = id; 
