@@ -20,11 +20,7 @@ public:
     ~RegistrationDialog();
 
 signals:
-<<<<<<< HEAD
     void loginSuccess(int userId, const QString &login);
-=======
-    void loginSuccess(int userId, QString login);
->>>>>>> budget-client
 
 private slots:
     void onSignInClicked();
