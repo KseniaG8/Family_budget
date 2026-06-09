@@ -14,6 +14,11 @@ COPY . .
 
 RUN g++ main.cpp \
 database/Database.cpp \
+database/UserDatabase.cpp \
+database/TransactionDatabase.cpp \
+database/LimitDatabase.cpp \
+database/GoalDatabase.cpp \
+database/GroupDatabase.cpp \
 services/UserService.cpp \
 services/TransactionService.cpp \
 handlers/UserHandler.cpp \
