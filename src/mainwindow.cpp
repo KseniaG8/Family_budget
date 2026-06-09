@@ -37,11 +37,6 @@ MainWindow::MainWindow(QWidget *parent)
     ui->tableWidget->verticalHeader()->setVisible(false);
     ui->tableWidget->update();
 
-<<<<<<< HEAD
-    RegistrationDialog *dialog = new RegistrationDialog(this);
-    dialog->show();
-
-=======
     networkManager = new QNetworkAccessManager(this);
     connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::onReplyFinished);
 
@@ -318,7 +313,6 @@ void MainWindow::onStatisticsClicked()
     StatisticsDialog *dialog = new StatisticsDialog(this, currentUserId, baseUrl);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->exec();
->>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 }
 
 MainWindow::~MainWindow()

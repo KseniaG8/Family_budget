@@ -12,16 +12,12 @@ public:
     TransactionService(Database &db);
 
     std::vector<Transaction> getUserTransactions(int user_id);
-<<<<<<< HEAD
-    void addTransaction(int user_id, std::string type, double amount, std::string category);
-=======
     void addTransaction(
         int user_id,
         std::string type,
         double amount,
         std::string category
     );
->>>>>>> 22e5bb2d01344dce828f490fe50a23d68012dcbf
 
     double getBalance(int user_id);
 
