@@ -118,7 +118,7 @@ void RegistrationDialog::onReplyFinished(QNetworkReply *reply)
     QJsonObject obj = doc.object();
 
     QString url = reply->url().toString();
-
+    qDebug() << "ОТВЕТ СЕРВЕРА НА" << url << ":" << doc.toJson(QJsonDocument::Compact);
     if (url.contains("/register")) {
         if (obj.contains("error") || obj["status"].toString() == "error") {
             QString errMsg = obj.contains("message") ? obj["message"].toString() : obj["error"].toString();
