@@ -14,6 +14,7 @@ BudgetLimitsDialog::BudgetLimitsDialog(QWidget *parent, int userId, const QStrin
 {
     ui->setupUi(this);
     setWindowTitle("Управление лимитами");
+    ui->limitSpin->setMaximum(1000000000.0);
     ui->categoryCombo->addItems({"Еда", "Транспорт", "Развлечения", "Зарплата", "Другое"});
     networkManager = new QNetworkAccessManager(this);
     connect(networkManager, &QNetworkAccessManager::finished, this, &BudgetLimitsDialog::onReplyFinished);
@@ -34,6 +35,85 @@ void BudgetLimitsDialog::sendPostRequest(const QString &endpoint, const QJsonObj
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
+    QJsonDocument doc(data);
+    networkManager->post(request, doc.toJson());
+}
+
+void BudgetLimitsDialog::sendGetRequest(const QString &endpoint)
+{
+    QUrl url(baseUrl + endpoint);
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    networkManager->get(request);
+}
+
+void BudgetLimitsDialog::loadCurrentLimit(const QString &category)
+{
+    sendGetRequest(QString("/limits/check?user_id=%1&category=%2&period=monthly").arg(currentUserId).arg(category));
+}
+
+void BudgetLimitsDialog::onSavedClicked()
+{
+    QString category = ui->categoryCombo->currentText();
+    double limit = ui->limitSpin->value();
+
+    QJsonObject request;
+    request["user_id"] = currentUserId;
+    request["category"] = category;
+    request["limit"] = limit;
+    request["period"] = "monthly";
+    sendPostRequest("/limits", request);
+}
+
+void BudgetLimitsDialog::onCheckClicked()
+{
+    QString category = ui->categoryCombo->currentText();
+    sendGetRequest(QString("/limits/check?user_id=%1&category=%2&period=monthly").arg(currentUserId).arg(category));
+}
+
+void BudgetLimitsDialog::onReplyFinished(QNetworkReply *reply)
+{
+    if (reply->error() != QNetworkReply::NoError) {
+        QMessageBox::warning(this, "Ошибка", "Ошибка сети: " + reply->errorString());
+        reply->deleteLater();
+        return;
+    }
+
+    QByteArray data = reply->readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    QJsonObject obj = doc.object();
+
+    QString url = reply->url().toString();
+
+    if (url.contains("/limits") && reply->operation() == QNetworkAccessManager::PostOperation) {
+        if (obj["status"].toString() == "error") {
+            QString msg = obj.contains("message") ? obj["message"].toString() : "Ошибка БД";
+            QMessageBox::warning(this, "Ошибка", msg);
+        } else {
+            QMessageBox::information(this, "Успех", "Лимит сохранён!");
+            loadCurrentLimit(ui->categoryCombo->currentText());
+        }
+    }
+    else if (url.contains("/limits/check")) {
+        if (obj["status"].toString() == "error") {
+            ui->limitSpin->setValue(0);
+            QMessageBox::information(this, "Информация", "Лимит по этой категории не установлен.");
+        } else {
+            double limit = obj["limit"].toDouble();
+            double spent = obj["spent"].toDouble();
+            double remaining = obj["remaining"].toDouble();
+
+            QString message = QString("Лимит: %1\nПотрачено: %2\nОсталось: %3")
+                                  .arg(limit).arg(spent).arg(remaining);
+
+            QMessageBox::information(this, "Информация", message);
+
+            ui->limitSpin->setValue(limit);
+        }
+    }
+
+    reply->deleteLater();
+}
     QJsonDocument doc(data);
     networkManager->post(request, doc.toJson());
 }

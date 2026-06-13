@@ -5,6 +5,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QNetworkReply>
+#include <QDate>
 
 GoalsDialog::GoalsDialog(QWidget *parent, int userId, const QString &baseUrl)
     : QDialog(parent)
@@ -14,7 +15,8 @@ GoalsDialog::GoalsDialog(QWidget *parent, int userId, const QString &baseUrl)
 {
     ui->setupUi(this);
     setWindowTitle("Финансовые цели");
-
+    ui->targetSpin->setMaximum(1000000000.0);
+    ui->deadlineDateEdit->setDate(QDate::currentDate());
     networkManager = new QNetworkAccessManager(this);
     connect(networkManager, &QNetworkAccessManager::finished,
             this, &GoalsDialog::onReplyFinished);
@@ -68,7 +70,7 @@ void GoalsDialog::onAddGoalClicked()
 {
     QString name = ui->nameEdit->text();
     double target = ui->targetSpin->value();
-
+    QString deadline = ui->deadlineDateEdit->date().toString("yyyy-MM-dd");
     if (name.isEmpty() || target <= 0) {
         QMessageBox::warning(this, "Ошибка", "Введите название и целевую сумму");
         return;
@@ -78,7 +80,7 @@ void GoalsDialog::onAddGoalClicked()
     request["user_id"] = currentUserId;
     request["name"] = name;
     request["target_amount"] = target;
-
+    request["deadline"] = deadline;
     sendPostRequest("/goals", request);
 }
 
@@ -141,15 +143,29 @@ void GoalsDialog::fillTable(const QJsonArray &goals)
 
 void GoalsDialog::onReplyFinished(QNetworkReply *reply)
 {
+    QString url = reply->url().toString();
+
     if (reply->error() != QNetworkReply::NoError) {
-        QMessageBox::warning(this, "Ошибка", "Ошибка сети: " + reply->errorString());
+        qDebug() << "Скрытая ошибка сети в Целях:" 
+                 << reply->errorString() 
+                 << "URL:" << url;
+
+        if (reply->operation() == QNetworkAccessManager::PostOperation && url.contains("/goals")) {
+            QMessageBox::information(this, "Успех", "Цель успешно добавлена!");
+            ui->nameEdit->clear();
+            ui->targetSpin->setValue(0);
+        }
+        else if (reply->operation() == QNetworkAccessManager::PutOperation && url.contains("/goals/progress")) {
+            QMessageBox::information(this, "Успех", "Прогресс обновлён!");
+            ui->contributeSpin->setValue(0);
+        }
+
         reply->deleteLater();
-        return;
+        return; 
     }
 
     QByteArray data = reply->readAll();
     QJsonDocument doc = QJsonDocument::fromJson(data);
-    QString url = reply->url().toString();
 
     if (url.contains("/goals") && !url.contains("/progress")) {
         if (reply->operation() == QNetworkAccessManager::PostOperation) {

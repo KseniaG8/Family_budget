@@ -7,7 +7,7 @@ void Database::addTransaction(const Transaction &t) {
 
     std::string sql =
         "INSERT INTO transactions (user_id, type, amount, "
-        "category, created_at) VALUES (?, ?, ?, ?, datetime('now'));";
+        "category, description, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'));";
     sqlite3_stmt *stmt = nullptr;
 
     if (sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) != SQLITE_OK) {
@@ -20,7 +20,7 @@ void Database::addTransaction(const Transaction &t) {
     sqlite3_bind_text(stmt, 2, t.type.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_double(stmt, 3, t.amount);
     sqlite3_bind_text(stmt, 4, t.category.c_str(), -1, SQLITE_TRANSIENT);
-
+    sqlite3_bind_text(stmt, 5, t.description.c_str(), -1, SQLITE_TRANSIENT);
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         std::cerr << "Insert transaction failed: " << sqlite3_errmsg(db)
                   << "\n";
@@ -35,7 +35,7 @@ std::vector<Transaction> Database::getTransactionsByUser(int user_id) {
     std::vector<Transaction> result;
 
     std::string sql =
-        "SELECT id, user_id, group_id, type, amount, category "
+        "SELECT id, user_id, group_id, type, amount, category, created_at, description FROM transactions WHERE user_id = ? AND group_id IS NULL;"
         "FROM transactions "
         "WHERE user_id = ? AND group_id IS NULL;";
     sqlite3_stmt *stmt = nullptr;
@@ -64,6 +64,16 @@ std::vector<Transaction> Database::getTransactionsByUser(int user_id) {
         const unsigned char *categoryText = sqlite3_column_text(stmt, 5);
         if (categoryText) {
             t.category = reinterpret_cast<const char *>(categoryText);
+        }
+
+        const unsigned char *dateText = sqlite3_column_text(stmt, 6);
+        if (dateText) {
+            t.date = reinterpret_cast<const char *>(dateText); 
+        }
+
+        const unsigned char *descText = sqlite3_column_text(stmt, 7);
+        if (descText) {
+            t.description = reinterpret_cast<const char *>(descText);
         }
 
         result.push_back(t);
@@ -323,12 +333,12 @@ bool Database::addGroupTransaction(
 
 std::vector<Transaction> Database::getGroupTransactions(int group_id) {
     std::lock_guard<std::mutex> lock(db_mutex);
-
     std::vector<Transaction> result;
 
     std::string sql =
-        "SELECT id, user_id, group_id, type, amount, category "
-        "FROM transactions WHERE group_id = ?;";
+        "SELECT id, user_id, group_id, type, amount, category, created_at, description "
+        "FROM transactions "
+        "WHERE group_id = ?;";
 
     sqlite3_stmt *stmt = nullptr;
 
@@ -352,8 +362,13 @@ std::vector<Transaction> Database::getGroupTransactions(int group_id) {
         t.amount = sqlite3_column_double(stmt, 4);
 
         const unsigned char *categoryText = sqlite3_column_text(stmt, 5);
-        t.category =
-            categoryText ? reinterpret_cast<const char *>(categoryText) : "";
+        t.category = categoryText ? reinterpret_cast<const char *>(categoryText) : "";
+
+        const unsigned char *dateText = sqlite3_column_text(stmt, 6);
+        t.date = dateText ? reinterpret_cast<const char *>(dateText) : "";
+
+        const unsigned char *descText = sqlite3_column_text(stmt, 7);
+        t.description = descText ? reinterpret_cast<const char *>(descText) : "";
 
         result.push_back(t);
     }

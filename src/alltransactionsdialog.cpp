@@ -37,7 +37,7 @@ AllTransactionsDialog::~AllTransactionsDialog()
 
 void AllTransactionsDialog::onBackClicked()
 {
-    close();  // или accept() / reject()
+    close();  
 }
 
 void AllTransactionsDialog::onRefreshClicked()
@@ -59,18 +59,23 @@ void AllTransactionsDialog::fillTable(const QJsonArray &transactions)
 {
     ui->tableWidget->verticalHeader()->setDefaultSectionSize(30);
 
-    ui->tableWidget->setFixedHeight(10);
-
     ui->tableWidget->setRowCount(transactions.size());
 
     for (int i = 0; i < transactions.size(); ++i) {
         QJsonObject obj = transactions[i].toObject();
+        QString dateStr = "-";
+        QString rawDate = obj["date"].toString();
+        if (!rawDate.isEmpty()) {
+            QDate d = QDate::fromString(rawDate.left(10), "yyyy-MM-dd");
+            if (d.isValid()) dateStr = d.toString("dd.MM.yyyy");
+            else dateStr = rawDate;
+        }
         ui->tableWidget->setItem(i, 0, new QTableWidgetItem(obj["date"].toString()));
         ui->tableWidget->setItem(i, 1, new QTableWidgetItem(obj["category"].toString()));
         ui->tableWidget->setItem(i, 2, new QTableWidgetItem(QString::number(obj["amount"].toDouble())));
     }
 
-    ui->tableWidget->resizeColumnsToContents();
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 }
 
 void AllTransactionsDialog::onReplyFinished(QNetworkReply *reply)

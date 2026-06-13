@@ -1,7 +1,7 @@
 #pragma once
 #include <nlohmann/json.hpp>
 #include <vector>
-
+#include "MLCategorizer.h"
 #include "../database/Database.h"
 #include "../models/Group.h"
 #include "../models/GroupMember.h"
@@ -91,7 +91,9 @@ public:
     );
     std::vector<Transaction> getGroupTransactions(int group_id);
     double getGroupBalance(int group_id);
+    std::string predictCategory(int user_id, const std::string& description);
 
 private:
     Database &database;
+    MLCategorizer ml;
 };

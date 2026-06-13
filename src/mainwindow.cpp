@@ -16,6 +16,7 @@
 #include <QDoubleSpinBox>
 #include <QUrlQuery>
 #include <QDialogButtonBox>
+#include <QDateEdit>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -35,7 +36,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->tableWidget->setColumnCount(3);
     ui->tableWidget->setHorizontalHeaderLabels(QStringList() << "Дата" << "Категория" << "Сумма");
     ui->tableWidget->verticalHeader()->setVisible(false);
-    ui->tableWidget->update();
+    
+    ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
     networkManager = new QNetworkAccessManager(this);
     connect(networkManager, &QNetworkAccessManager::finished, this, &MainWindow::onReplyFinished);
@@ -130,17 +133,39 @@ void MainWindow::updateBalance(double balance)
 
 void MainWindow::fillTable(const QJsonArray &transactions)
 {
-    ui->tableWidget->setRowCount(transactions.size());
+    ui->tableWidget->setRowCount(0);
+    
+    int limit = qMin(transactions.size(), 5);
 
-    for (int i = 0; i < transactions.size(); ++i) {
+    for (int i = 0; i < limit; ++i) {
         QJsonObject obj = transactions[i].toObject();
+        
+        int row = ui->tableWidget->rowCount();
+        ui->tableWidget->insertRow(row);
 
-        ui->tableWidget->setItem(i, 0, new QTableWidgetItem(obj["date"].toString()));
-        ui->tableWidget->setItem(i, 1, new QTableWidgetItem(obj["category"].toString()));
-        ui->tableWidget->setItem(i, 2, new QTableWidgetItem(QString::number(obj["amount"].toDouble())));
+        QString rawDate = "";
+        if (obj.contains("date") && !obj["date"].toString().isEmpty()) {
+            rawDate = obj["date"].toString();
+        } else if (obj.contains("created_at") && !obj["created_at"].toString().isEmpty()) {
+            rawDate = obj["created_at"].toString();
+        }
+        
+        QString dateStr = "-";
+        if (!rawDate.isEmpty()) {
+            QDate d = QDate::fromString(rawDate.left(10), "yyyy-MM-dd");
+            if (d.isValid()) {
+                dateStr = d.toString("dd.MM.yyyy");
+            } else {
+                dateStr = rawDate;
+            }
+        }
+        
+        ui->tableWidget->setItem(row, 0, new QTableWidgetItem(dateStr));
+        ui->tableWidget->setItem(row, 1, new QTableWidgetItem(obj["category"].toString()));
+        
+        QString amountStr = QString::number(obj["amount"].toDouble(), 'f', 2);
+        ui->tableWidget->setItem(row, 2, new QTableWidgetItem(amountStr));
     }
-
-    ui->tableWidget->resizeColumnsToContents();
 }
 
 void MainWindow::onAddButtonClicked()
@@ -157,6 +182,10 @@ void MainWindow::onAddButtonClicked()
     QComboBox *categoryBox = new QComboBox;
     categoryBox->addItems({"Еда", "Транспорт", "Развлечения", "Зарплата", "Другое"});
     layout.addRow("Категория:", categoryBox);
+
+    QDateEdit *dateEdit = new QDateEdit(QDate::currentDate());
+    dateEdit->setCalendarPopup(true); 
+    layout.addRow("Дата:", dateEdit);
 
     QDoubleSpinBox *amountSpin = new QDoubleSpinBox;
     amountSpin->setRange(0, 1000000);
@@ -176,9 +205,8 @@ void MainWindow::onAddButtonClicked()
         request["type"] = type;
         request["amount"] = amountSpin->value();
         request["category"] = categoryBox->currentText();
-
+        request["date"] = dateEdit->date().toString("yyyy-MM-dd");
         sendPostRequest("/transactions", request);
-
 
         if (type == "expense") {
             QString category = categoryBox->currentText();
@@ -226,12 +254,12 @@ void MainWindow::onReplyFinished(QNetworkReply *reply)
         double balance = obj["balance"].toDouble();
         updateBalance(balance);
     }
-    else if (url.contains("/transactions") && !url.contains("/transaction")) {
+    else if (obj.contains("transactions") && obj["transactions"].isArray()) {
         QJsonArray transactions = obj["transactions"].toArray();
         fillTable(transactions);
     }
     else if (url.contains("/limits/check")) {
-        if (obj.contains("error")) return;
+        if (obj["status"].toString() == "error") return;
 
         double limit = obj["limit"].toDouble();
         double spent = obj["spent"].toDouble();
@@ -243,9 +271,9 @@ void MainWindow::onReplyFinished(QNetworkReply *reply)
                                  QString("Вы превысили лимит по категории '%1'!\n"
                                          "Лимит: %2\nПотрачено: %3\nОсталось: %4")
                                      .arg(category).arg(limit).arg(spent).arg(remaining));
-        } else if (spent > limit * 0.8) {
+        } else if (spent >= limit * 0.8) {
             QMessageBox::information(this, "Внимание",
-                                     QString("По категории '%1' осталось менее 20%% лимита.\n"
+                                     QString("По категории '%1' осталось менее 20% лимита.\n"
                                              "Осталось: %2")
                                          .arg(category).arg(remaining));
         }
@@ -261,8 +289,6 @@ void MainWindow::onReplyFinished(QNetworkReply *reply)
             if (setupDialog.exec() == QDialog::Accepted) {
                 QMessageBox::information(this, "Успех", "Двухфакторная аутентификация успешно включена!");
             }
-        
-            QMessageBox::information(this, "Успех", "Двухфакторная аутентификация успешно включена!");
         }
     }   
 
@@ -284,7 +310,7 @@ void MainWindow::checkBudgetLimit(const QString &category)
 {
     pendingBudgetCategory = category;
 
-    sendGetRequest(QString("/limits/check?user_id=%1&category=%2").arg(currentUserId).arg(category));
+    sendGetRequest(QString("/limits/check?user_id=%1&category=%2&period=monthly").arg(currentUserId).arg(category));
 }
 
 void MainWindow::onGoalsButtonClicked()

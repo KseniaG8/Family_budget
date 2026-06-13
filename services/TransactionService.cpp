@@ -180,3 +180,9 @@ std::vector<Transaction> TransactionService::getGroupTransactions(int group_id
 double TransactionService::getGroupBalance(int group_id) {
     return database.getGroupBalance(group_id);
 }
+
+std::string TransactionService::predictCategory(int user_id, const std::string& description) {
+    std::vector<Transaction> history = database.getTransactionsByUser(user_id);
+    ml.train(history);
+    return ml.predictCategory(description);
+}

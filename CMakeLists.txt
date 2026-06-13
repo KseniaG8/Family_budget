@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 
 project(BudgetClient VERSION 0.1 LANGUAGES CXX)
 
@@ -132,7 +132,6 @@ find_library(BOTAN_LIBRARY
 add_executable(BudgetServer
     main.cpp
     
-    # База данных
     database/Database.cpp
     database/UserDatabase.cpp
     database/TransactionDatabase.cpp
@@ -141,7 +140,6 @@ add_executable(BudgetServer
     database/GroupDatabase.cpp
     
     services/CryptoHelper.cpp
-    services/CurrencyService.cpp
     services/MLCategorizer.cpp
     services/TransactionService.cpp
     services/UserService.cpp
@@ -168,7 +166,7 @@ target_include_directories(BudgetServer PRIVATE
 )
 
 target_link_libraries(BudgetServer PRIVATE
-    SQLite::SQLite3
+    SQLite3::SQLite3
     ${BOTAN_LIBRARY}
     OpenSSL::SSL
     OpenSSL::Crypto
