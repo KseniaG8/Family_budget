@@ -27,7 +27,9 @@ void Database::init() {
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             login TEXT UNIQUE,
-            password TEXT
+            password TEXT,
+            totp_secret TEXT DEFAULT '',
+            is_2fa_enabled INTEGER DEFAULT 0
         );
     )";
 
@@ -152,9 +154,10 @@ Database::~Database() {
     sqlite3_close(db);
 }
 
-bool Database::enable2FA(int user_id, const std::string& secret) {
-    std::string query = "UPDATE users SET totp_secret = '" + secret + "' WHERE id = " + std::to_string(user_id) + ";";
-    char* errMsg = nullptr;
+bool Database::enable2FA(int user_id, const std::string &secret) {
+    std::string query = "UPDATE users SET totp_secret = '" + secret +
+                        "' WHERE id = " + std::to_string(user_id) + ";";
+    char *errMsg = nullptr;
     if (sqlite3_exec(db, query.c_str(), 0, 0, &errMsg) != SQLITE_OK) {
         sqlite3_free(errMsg);
         return false;
@@ -162,9 +165,16 @@ bool Database::enable2FA(int user_id, const std::string& secret) {
     return true;
 }
 
-void Database::updateExchangeRate(const std::string& currencyCode, double rate) {
-    std::string query = "INSERT INTO exchange_rates (currency, rate) VALUES ('" + currencyCode + "', " + std::to_string(rate) + ") ON CONFLICT(currency) DO UPDATE SET rate = " + std::to_string(rate) + ";";
-    char* errMsg = nullptr;
+void Database::updateExchangeRate(
+    const std::string &currencyCode,
+    double rate
+) {
+    std::string query =
+        "INSERT INTO exchange_rates (currency, rate) VALUES ('" + currencyCode +
+        "', " + std::to_string(rate) +
+        ") ON CONFLICT(currency) DO UPDATE SET rate = " + std::to_string(rate) +
+        ";";
+    char *errMsg = nullptr;
     if (sqlite3_exec(db, query.c_str(), 0, 0, &errMsg) != SQLITE_OK) {
         sqlite3_free(errMsg);
     }
