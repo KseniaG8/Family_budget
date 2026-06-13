@@ -1,7 +1,24 @@
 #include "TransactionHandler.h"
 
-TransactionHandler::TransactionHandler(TransactionService &service)
-    : service(service) {
+namespace {
+bool isValidType(const std::string &type) {
+    return type == "income" || type == "expense";
+}
+
+bool isValidPeriod(const std::string &period) {
+    return period == "daily" || period == "weekly" || period == "monthly";
+}
+
+bool isEmptyString(const std::string &value) {
+    return value.empty() || value.find_first_not_of(' ') == std::string::npos;
+}
+}  // namespace
+
+TransactionHandler::TransactionHandler(
+    TransactionService &service,
+    UserService &userService
+)
+    : service(service), userService(userService) {
 }
 
 nlohmann::json TransactionHandler::getTransactions(int user_id) {
@@ -47,6 +64,18 @@ nlohmann::json TransactionHandler::addTransaction(
     double amount,
     std::string category
 ) {
+    if (!isValidType(type)) {
+        return {{"status", "error"}, {"message", "Invalid transaction type"}};
+    }
+
+    if (amount <= 0) {
+        return {{"status", "error"}, {"message", "Amount must be positive"}};
+    }
+
+    if (isEmptyString(category)) {
+        return {{"status", "error"}, {"message", "Category cannot be empty"}};
+    }
+
     service.addTransaction(user_id, type, amount, category);
 
     return {{"status", "success"}};
@@ -64,6 +93,18 @@ nlohmann::json TransactionHandler::updateTransaction(
     double amount,
     const std::string &category
 ) {
+    if (!isValidType(type)) {
+        return {{"status", "error"}, {"message", "Invalid transaction type"}};
+    }
+
+    if (amount <= 0) {
+        return {{"status", "error"}, {"message", "Amount must be positive"}};
+    }
+
+    if (isEmptyString(category)) {
+        return {{"status", "error"}, {"message", "Category cannot be empty"}};
+    }
+
     bool success =
         service.updateTransaction(transaction_id, type, amount, category);
 
@@ -101,12 +142,36 @@ nlohmann::json TransactionHandler::getTransactionById(int transaction_id) {
           {"category", t.category}}}};
 }
 
+nlohmann::json TransactionHandler::getCategoryStatistics(int user_id) {
+    auto stats = service.getCategoryStatistics(user_id);
+
+    nlohmann::json response = nlohmann::json::array();
+
+    for (const auto &[category, amount] : stats) {
+        response.push_back({{"category", category}, {"amount", amount}});
+    }
+
+    return response;
+}
+
 nlohmann::json TransactionHandler::setLimit(
     int user_id,
     const std::string &category,
     double limit_amount,
     const std::string &period
 ) {
+    if (limit_amount <= 0) {
+        return {{"status", "error"}, {"message", "Limit must be positive"}};
+    }
+
+    if (isEmptyString(category)) {
+        return {{"status", "error"}, {"message", "Category cannot be empty"}};
+    }
+
+    if (!isValidPeriod(period)) {
+        return {{"status", "error"}, {"message", "Invalid period"}};
+    }
+
     bool success = service.setLimit(user_id, category, limit_amount, period);
 
     if (success) {
@@ -121,6 +186,14 @@ nlohmann::json TransactionHandler::checkLimit(
     const std::string &category,
     const std::string &period
 ) {
+    if (isEmptyString(category)) {
+        return {{"status", "error"}, {"message", "Category cannot be empty"}};
+    }
+
+    if (!isValidPeriod(period)) {
+        return {{"status", "error"}, {"message", "Invalid period"}};
+    }
+
     double limit = service.getLimit(user_id, category, period);
 
     if (limit < 0) {
@@ -141,6 +214,15 @@ nlohmann::json TransactionHandler::addGoal(
     double target_amount,
     const std::string &deadline
 ) {
+    if (isEmptyString(name)) {
+        return {{"status", "error"}, {"message", "Goal name cannot be empty"}};
+    }
+
+    if (target_amount <= 0) {
+        return {
+            {"status", "error"}, {"message", "Target amount must be positive"}};
+    }
+
     bool success = service.addGoal(user_id, name, target_amount, deadline);
 
     return {{"status", success ? "success" : "error"}};
@@ -177,6 +259,12 @@ nlohmann::json TransactionHandler::getGoals(int user_id) {
 
 nlohmann::json
 TransactionHandler::updateGoalProgress(int goal_id, double current_amount) {
+    if (current_amount < 0) {
+        return {
+            {"status", "error"},
+            {"message", "Current amount cannot be negative"}};
+    }
+
     bool success = service.updateGoalProgress(goal_id, current_amount);
 
     return {{"status", success ? "success" : "error"}};
@@ -188,6 +276,15 @@ nlohmann::json TransactionHandler::updateGoal(
     double target_amount,
     const std::string &deadline
 ) {
+    if (isEmptyString(name)) {
+        return {{"status", "error"}, {"message", "Goal name cannot be empty"}};
+    }
+
+    if (target_amount <= 0) {
+        return {
+            {"status", "error"}, {"message", "Target amount must be positive"}};
+    }
+
     bool success = service.updateGoal(goal_id, name, target_amount, deadline);
 
     return {{"status", success ? "success" : "error"}};
@@ -195,6 +292,10 @@ nlohmann::json TransactionHandler::updateGoal(
 
 nlohmann::json
 TransactionHandler::createGroup(const std::string &name, int owner_id) {
+    if (isEmptyString(name)) {
+        return {{"status", "error"}, {"message", "Group name cannot be empty"}};
+    }
+
     int group_id = service.createGroup(name, owner_id);
 
     if (group_id == -1) {
@@ -224,13 +325,22 @@ nlohmann::json TransactionHandler::deleteGroup(int group_id, int requester_id) {
     return {{"status", success ? "success" : "error"}};
 }
 
-nlohmann::json TransactionHandler::addUserToGroup(int group_id, const std::string& login) { 
-    if (!service.groupExists(group_id)) return {{"status", "error"}, {"message", "Group not found"}};
-    if (!service.addUserToGroup(group_id, login)) return {{"status", "error"}, {"message", "User not found"}};
+nlohmann::json
+TransactionHandler::addUserToGroup(int group_id, const std::string &login) {
+    User user = userService.getUserByLogin(login);
+
+    if (user.id == -1) {
+        return {{"status", "error"}, {"message", "User not found"}};
+    }
+
+    bool success = service.addUserToGroup(group_id, user.id);
+
+    if (!success) {
+        return {
+            {"status", "error"}, {"message", "Failed to add user to group"}};
+    }
+
     return {{"status", "success"}};
-}
-nlohmann::json TransactionHandler::getCategoryAnalytics(int user_id) {
-    return service.getCategoryAnalytics(user_id);
 }
 
 nlohmann::json TransactionHandler::removeUserFromGroup(
