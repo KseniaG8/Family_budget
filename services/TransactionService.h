@@ -1,7 +1,7 @@
 #pragma once
 #include <nlohmann/json.hpp>
 #include <vector>
-
+#include "MLCategorizer.h"
 #include "../database/Database.h"
 #include "../models/Group.h"
 #include "../models/GroupMember.h"
@@ -33,6 +33,8 @@ public:
     bool deleteTransaction(int transaction_id);
 
     Transaction getTransactionById(int transaction_id);
+
+    std::map<std::string, double> getCategoryStatistics(int user_id);
 
     bool setLimit(
         int user_id,
@@ -71,8 +73,7 @@ public:
     bool deleteGroup(int group_id);
     bool groupExists(int group_id);
 
-    bool addUserToGroup(int group_id, const std::string& login); 
-    nlohmann::json getCategoryAnalytics(int user_id);
+    bool addUserToGroup(int group_id, int user_id);
     bool removeUserFromGroup(int group_id, int user_id);
     bool userExists(int user_id);
 
@@ -90,7 +91,9 @@ public:
     );
     std::vector<Transaction> getGroupTransactions(int group_id);
     double getGroupBalance(int group_id);
+    std::string predictCategory(int user_id, const std::string& description);
 
 private:
     Database &database;
+    MLCategorizer ml;
 };
