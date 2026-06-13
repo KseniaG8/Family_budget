@@ -79,6 +79,7 @@ public:
     );
     nlohmann::json getGroupTransactions(int group_id, int requester_id);
     nlohmann::json getGroupBalance(int group_id, int requester_id);
+    nlohmann::json predictCategory(int user_id, const std::string& description);
 
 private:
     TransactionService &service;
