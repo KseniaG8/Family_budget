@@ -1,5 +1,6 @@
 #pragma once
 #include <sqlite3.h>
+#include <map>
 #include <mutex>
 #include <vector>
 
@@ -39,6 +40,8 @@ public:
     bool deleteTransaction(int transaction_id);
 
     Transaction getTransactionById(int transaction_id);
+
+    std::map<std::string, double> getCategoryStatistics(int user_id);
 
     bool setLimit(
         int user_id,
@@ -109,9 +112,9 @@ public:
 
     double getGroupBalance(int group_id);
 
-    bool enable2FA(int user_id, const std::string& secret);
-    void updateExchangeRate(const std::string& currencyCode, double rate);
-    
+    bool enable2FA(int user_id, const std::string &secret);
+    void updateExchangeRate(const std::string &currencyCode, double rate);
+
 private:
     sqlite3 *db = nullptr;
     std::mutex db_mutex;
