@@ -31,7 +31,8 @@ nlohmann::json TransactionHandler::getTransactions(int user_id) {
             {{"id", t.id},
              {"type", t.type},
              {"amount", t.amount},
-             {"category", t.category}}
+             {"category", t.category},
+             {"date", t.date}}
         );
     }
 
@@ -51,7 +52,8 @@ nlohmann::json TransactionHandler::getTransactionsByCategory(
             {{"id", t.id},
              {"type", t.type},
              {"amount", t.amount},
-             {"category", t.category}}
+             {"category", t.category},
+             {"date", t.date}}
         );
     }
 
@@ -442,10 +444,11 @@ TransactionHandler::getGroupTransactions(int group_id, int requester_id) {
              {"group_id", t.group_id},
              {"type", t.type},
              {"amount", t.amount},
-             {"category", t.category}}
+             {"category", t.category},
+             {"date", t.date},
+             {"description", t.description}}
         );
     }
-
     return response;
 }
 
@@ -459,4 +462,9 @@ TransactionHandler::getGroupBalance(int group_id, int requester_id) {
 
     return {
         {"status", "success"}, {"group_id", group_id}, {"balance", balance}};
+}
+
+nlohmann::json TransactionHandler::predictCategory(int user_id, const std::string& description) {
+    std::string predicted = service.predictCategory(user_id, description);
+    return {{"status", "success"}, {"category", predicted}};
 }
